@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: kaanaynagoz/kastamonu-elektrik # Sol alttaki kullanıcı adınıza göre yazdım
+  repo: kaanaynagoz/kastamonu-elektrik
   branch: main
 
 media_folder: "images"
