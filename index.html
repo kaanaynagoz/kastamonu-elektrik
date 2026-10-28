@@ -905,7 +905,7 @@
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
                     pos = 0; tick();
-                    timer = setInterval(tick, 1000);
+                    timer = setInterval(tick, 50);
                 } else {
                     clearInterval(timer);
                     document.title = originalTitle;
