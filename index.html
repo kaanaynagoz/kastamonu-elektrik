@@ -712,13 +712,16 @@
                     <div class="bg-white p-2 rounded-3xl border border-slate-200 shadow-sm overflow-hidden h-72">
                         <iframe 
                             title="Kastamonu Elektrik Google Harita Konumu"
-                            src="https://www.google.com/maps?q=Kastamonu%20Elektrik%2C%20Alparslan%20T%C3%BCrke%C5%9F%20Blv.%20Deniz%20Apartman%C4%B1%20No%3A25/G%2C%20Candaro%C4%9Fullar%C4%B1%2C%20Kastamonu&hl=tr&z=17&output=embed" 
+                            data-src="https://www.google.com/maps?q=Kastamonu%20Elektrik%2C%20Alparslan%20T%C3%BCrke%C5%9F%20Blv.%20Deniz%20Apartman%C4%B1%20No%3A25/G%2C%20Candaro%C4%9Fullar%C4%B1%2C%20Kastamonu&hl=tr&z=17&output=embed" 
                             class="w-full h-full rounded-2xl border-0" 
                             allowfullscreen="" 
-                            loading="lazy"
+                            tabindex="-1"
                             referrerpolicy="no-referrer-when-downgrade">
                         </iframe>
                     </div>
+                    <p class="text-center">
+                        <a href="https://share.google/bpid9f083nUVyaiIb" target="_blank" rel="noopener" class="text-keBlue-600 hover:text-keBlue-700 font-bold text-sm hover:underline">Google işletme kartımızı aç &rarr;</a>
+                    </p>
 
                 </div>
 
@@ -920,6 +923,35 @@
             showToast('Mesajınız tarafımıza iletildi. Teşekkür ederiz!');
             e.target.reset();
         }
+
+        // Harita: kullanıcı yaklaşınca yüklenir (iframe odağı çalıp sayfayı aşağı kaydırmasın)
+        (function () {
+            const f = document.querySelector('iframe[data-src]');
+            if (!f) return;
+            const load = () => { f.src = f.dataset.src; };
+            if ('IntersectionObserver' in window) {
+                const io = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) { load(); io.disconnect(); }
+                }, { rootMargin: '300px' });
+                io.observe(f);
+            } else {
+                window.addEventListener('load', load);
+            }
+        })();
+
+        // Açılışta kullanıcı dokunmadan sayfa kayarsa başa dön (yenileme ve #bağlantılar hariç)
+        (function () {
+            if (location.hash) return;
+            const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            if (nav && nav.type !== 'navigate') return;
+            let touched = false;
+            const mark = () => { touched = true; };
+            ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(e => window.addEventListener(e, mark, { once: true, passive: true }));
+            const until = Date.now() + 5000;
+            window.addEventListener('scroll', () => {
+                if (!touched && Date.now() < until && window.scrollY > 0) window.scrollTo(0, 0);
+            }, { passive: true });
+        })();
     </script>
 </body>
 </html>
