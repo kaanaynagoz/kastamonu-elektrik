@@ -1,0 +1,17 @@
+backend:
+  name: github
+  repo: kaanaynagoz/kastamonu-elektrik # Sol alttaki kullanıcı adınıza göre yazdım
+  branch: main
+
+media_folder: "images"
+public_folder: "/images"
+
+collections:
+  - name: "pages"
+    label: "Sayfalar"
+    files:
+      - file: "index.html"
+        label: "Anasayfa"
+        name: "index"
+        fields:
+          - { label: "Site Başlığı", name: "title", widget: "string" }
