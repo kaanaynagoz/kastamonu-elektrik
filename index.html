@@ -20,6 +20,11 @@
             body > header { transition: transform .3s ease; will-change: transform; }
             body > header.header-hidden { transform: translateY(-100%); }
         }
+        @media (max-width: 639px) {
+            body > header > div > div { position: relative; }
+            #brand-logos { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+            #mobile-menu-btn { margin-left: auto; }
+        }
         .ge-photo-bg { background: radial-gradient(circle at 50% 55%, #475569 0%, #1e293b 65%, #0f172a 100%); }
         body { font-family: 'Inter', sans-serif; }
         .card-hover {
@@ -75,7 +80,7 @@
                 
                 <!-- BRAND LOGO -->
                 
-                <div class="flex items-center gap-2.5 sm:gap-4 shrink-0">
+                <div id="brand-logos" class="flex items-center gap-2.5 sm:gap-4 shrink-0">
                     <a href="#" class="flex items-center group py-2 shrink-0" aria-label="Kastamonu Elektrik">
                     <img src="images/logo-kastamonu-elektrik.webp" width="367" height="132" decoding="async" alt="Kastamonu Elektrik" class="h-9 sm:h-11 w-auto max-w-none shrink-0 transition-transform duration-200 group-hover:scale-105">
                 </a>
