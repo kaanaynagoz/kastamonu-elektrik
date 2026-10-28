@@ -892,6 +892,16 @@
             }, { passive: true });
         })();
 
+
+        // Sekme değişince başlığı değiştir
+        (function () {
+            const originalTitle = document.title;
+            const awayTitle = 'Güvenli Güç Burada..';
+            document.addEventListener('visibilitychange', () => {
+                document.title = document.hidden ? awayTitle : originalTitle;
+            });
+        })();
+
         // Modal Controls
         function openModal(title) {
             document.getElementById('modal-product-title').textContent = title;
