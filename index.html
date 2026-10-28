@@ -893,12 +893,23 @@
         })();
 
 
-        // Sekme değişince başlığı değiştir
+        // Sekme değişince başlık kayarak (marquee) görünsün
         (function () {
             const originalTitle = document.title;
-            const awayTitle = 'Güvenli Güç Burada..';
+            const awayText = 'Güvenli Güç Burada..   ';
+            let timer = null, pos = 0;
+            function tick() {
+                document.title = awayText.slice(pos) + awayText.slice(0, pos);
+                pos = (pos + 1) % awayText.length;
+            }
             document.addEventListener('visibilitychange', () => {
-                document.title = document.hidden ? awayTitle : originalTitle;
+                if (document.hidden) {
+                    pos = 0; tick();
+                    timer = setInterval(tick, 500);
+                } else {
+                    clearInterval(timer);
+                    document.title = originalTitle;
+                }
             });
         })();
 
