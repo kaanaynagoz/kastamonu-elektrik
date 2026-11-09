@@ -118,9 +118,11 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
         <input type="file" id="iFile" accept="image/png,image/jpeg,image/webp" class="hidden">
         <label for="iAlt">Görsel açıklaması (Google ve görme engelliler için)</label>
         <input id="iAlt" class="inp" type="text">
-        <div id="iLinkBox" class="hidden">
-          <label for="ihVal">Link adresi</label>
-          <input id="ihVal" class="inp" type="text">
+        <div id="iLinkBox">
+          <label for="ihVal">Görsele tıklanınca gidilecek adres</label>
+          <input id="ihVal" class="inp" type="text" placeholder="Link yok — eklemek için adres yazın">
+          <div class="muted" style="font-size:12px;margin-top:5px">Örnek: <code>www.ornek.com</code>, <code>0543 320 50 37</code>, <code>#iletisim</code></div>
+          <button class="btn" id="iUnlink" style="width:100%;margin-top:8px">Linki kaldır</button>
         </div>
       </div>
     </aside>
@@ -354,14 +356,40 @@ function showPanel(s){
     $('iAlt').value = s.el.getAttribute('alt') || '';
     $('iInfo').textContent = u ? ('Yeni görsel: ' + u.w + '×' + u.h + ' px, ' + Math.round(u.blob.size / 1024) + ' KB (kaydedilmedi)')
                                : ('Şu anki görsel: ' + (s.el.naturalWidth || '?') + '×' + (s.el.naturalHeight || '?') + ' px');
-    $('iLinkBox').classList.toggle('hidden', !link);
-    if (link) $('ihVal').value = link.getAttribute('href') || '';
+    if (link) $('ihVal').value = s.el.hasAttribute('data-adm-unlink') ? '' : (link.getAttribute('href') || '');
+    else $('ihVal').value = s.el.getAttribute('data-adm-link') || '';
+    $('iUnlink').classList.toggle('hidden', !$('ihVal').value || (!!link && !onlyImg(link)));
   }
 }
 $('tVal').addEventListener('input', () => { if (sel && sel.type === 'text') { sel.el.textContent = $('tVal').value.replace(/\s*\n\s*/g, ' '); updateCount(); } });
-function hrefInput(inp){ return () => { const l = sel && sel.el.closest('a[data-adm-a]'); if (l) { l.setAttribute('href', inp.value.trim()); updateCount(); } }; }
-$('hVal').addEventListener('input', hrefInput($('hVal')));
-$('ihVal').addEventListener('input', hrefInput($('ihVal')));
+// Yazılan adresi tamamla: www.ornek.com -> https://..., telefon -> tel:, e-posta -> mailto:
+function normHref(v){
+  v = (v || '').trim();
+  if (!v) return '';
+  if (/^(https?:|tel:|mailto:|#|\/|\.\.?\/)/i.test(v)) return v;
+  if (/^\+?[\d\s()-]{7,}$/.test(v)) return 'tel:' + v.replace(/[^\d+]/g, '');
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'mailto:' + v;
+  return 'https://' + v;
+}
+// Link sadece bu görseli mi sarıyor? (o zaman link kaldırılabilir)
+function onlyImg(a){ return a.querySelectorAll('img').length === 1 && a.children.length === 1 && !a.textContent.trim(); }
+$('hVal').addEventListener('input', () => { const l = sel && sel.el.closest('a[data-adm-a]'); if (l) { l.setAttribute('href', $('hVal').value.trim()); updateCount(); } });
+$('hVal').addEventListener('change', () => { $('hVal').value = normHref($('hVal').value) || $('hVal').value; $('hVal').dispatchEvent(new Event('input')); });
+function setImgLink(v){
+  if (!sel || sel.type !== 'img') return;
+  const im = sel.el, l = im.closest('a[data-adm-a]');
+  if (l) {
+    if (!v && onlyImg(l)) im.setAttribute('data-adm-unlink', '1');
+    else { im.removeAttribute('data-adm-unlink'); if (v) l.setAttribute('href', v); }
+  } else {
+    if (v) im.setAttribute('data-adm-link', v); else im.removeAttribute('data-adm-link');
+  }
+  $('iUnlink').classList.toggle('hidden', !$('ihVal').value || (!!l && !onlyImg(l)));
+  updateCount();
+}
+$('ihVal').addEventListener('input', () => setImgLink($('ihVal').value.trim()));
+$('ihVal').addEventListener('change', () => { $('ihVal').value = normHref($('ihVal').value); setImgLink($('ihVal').value); });
+$('iUnlink').onclick = () => { $('ihVal').value = ''; setImgLink(''); };
 $('iAlt').addEventListener('input', () => { if (sel && sel.type === 'img') { sel.el.setAttribute('alt', $('iAlt').value); updateCount(); } });
 
 // ---------- görsel değiştir ----------
@@ -436,6 +464,7 @@ function changeCount(){
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => { if (s.textContent !== orig.t[+s.getAttribute('data-adm-t')]) n++; });
   fdoc.querySelectorAll('a[data-adm-a]').forEach(l => { if ((l.getAttribute('href') || '') !== orig.a[+l.getAttribute('data-adm-a')]) n++; });
   fdoc.querySelectorAll('img[data-adm-i]').forEach(im => { if ((im.getAttribute('alt') || '') !== orig.alt[+im.getAttribute('data-adm-i')]) n++; });
+  n += fdoc.querySelectorAll('img[data-adm-link],img[data-adm-unlink]').length;
   n += uploads.size + (seo ? 1 : 0);
   return n;
 }
@@ -466,6 +495,19 @@ function buildHtml(){
       t.setAttribute('width', u.w); t.setAttribute('height', u.h);
       // Ön yükleme yapılan görselse (ilk ekrandaki büyük görsel) onu da güncelle
       d.querySelectorAll('link[rel="preload"][as="image"]').forEach(l => { if (l.getAttribute('href') === oldSrc) l.setAttribute('href', u.rel); });
+    }
+    // Görsel linki ekle / kaldır
+    const add = normHref(im.getAttribute('data-adm-link'));
+    if (add && !t.closest('a')) {
+      const a = d.createElement('a');
+      a.setAttribute('href', add);
+      if (/^https?:/i.test(add)) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); }
+      a.setAttribute('style', 'display:contents'); // sayfa düzeni bozulmasın
+      t.replaceWith(a); a.appendChild(t);
+    }
+    if (im.hasAttribute('data-adm-unlink')) {
+      const a = t.closest('a');
+      if (a && onlyImg(a)) a.replaceWith(t);
     }
   });
   if (seo) {
