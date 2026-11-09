@@ -58,6 +58,9 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .sec-list li small{color:var(--muted);font-weight:500}
 .sec-list button{width:34px;height:34px;padding:0;border-radius:9px}
 .sec-list li.moved{border-color:var(--green);box-shadow:0 0 0 3px rgba(101,182,50,.15)}
+.bstyles{display:flex;flex-wrap:wrap;gap:8px}
+.bstyles button{padding:8px 14px;border-radius:10px;border:0;font-weight:700;cursor:pointer;font-size:13.5px;outline:2px solid transparent;outline-offset:2px}
+.bstyles button.on{outline-color:#65b632}
 .sw{width:26px;height:26px;border-radius:50%;border:1px solid #cfd8e3;cursor:pointer;padding:0}
 .sw:hover{transform:scale(1.12)}
 @media(max-width:900px){.main{flex-direction:column}.panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:42vh}.bar .ttl{display:none}}
@@ -150,6 +153,16 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
           <button class="btn" id="iUnlink" style="width:100%;margin-top:8px">Linki kaldır</button>
         </div>
       </div>
+      <div id="pBtn" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+        <h3 id="pBtnH">Buton</h3>
+        <div id="pBtnLinkBox" class="hidden">
+          <label for="pBtnHref">Butonun gittiği adres</label>
+          <input id="pBtnHref" class="inp" type="text">
+        </div>
+        <button class="btn" id="btnDel" style="width:100%;margin-top:10px;color:var(--red)">Bu butonu kaldır</button>
+        <button class="btn btn-green" id="btnAdd" style="width:100%;margin-top:8px">+ Buraya buton ekle</button>
+        <p class="muted" id="btnNote" style="font-size:12px;margin:8px 0 0"></p>
+      </div>
       <div id="pRef" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
         <h3>Referans</h3>
         <p class="muted" id="pRefName" style="margin:2px 0 10px"></p>
@@ -163,6 +176,25 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
     </aside>
   </div>
 </div>
+
+<!-- BUTON EKLE -->
+<div class="dlg hidden" id="btnDlg"><div>
+  <h3>Yeni buton</h3>
+  <p class="muted" style="margin:0" id="bWhere"></p>
+  <label for="bText">Buton yazısı *</label><input id="bText" class="inp" placeholder="Örn: Hemen Arayın">
+  <label for="bHref">Gideceği adres *</label><input id="bHref" class="inp" placeholder="0543 320 50 37, wa.me/905433205037, #iletisim, www.ornek.com">
+  <div class="muted" style="font-size:12px;margin-top:5px">Telefon numarası yazarsanız arama, <code>wa.me/…</code> yazarsanız WhatsApp, <code>#iletisim</code> gibi yazarsanız sayfadaki bölüme gider. Telefon ve WhatsApp butonlarına ikon otomatik eklenir.</div>
+  <label>Renk</label>
+  <div id="bStyles" class="bstyles">
+    <button type="button" data-s="btn-green" class="on" style="background:#65b632;color:#fff">Yeşil</button>
+    <button type="button" data-s="btn-wa" style="background:#13a96b;color:#fff">WhatsApp</button>
+    <button type="button" data-s="btn-ink" style="background:#0b1b33;color:#fff">Lacivert</button>
+    <button type="button" data-s="btn-blue" style="background:#1da1f2;color:#fff">Mavi</button>
+    <button type="button" data-s="btn-line" style="background:#fff;color:#0b1b33;border:1.5px solid #c8d3e0">Çerçeveli</button>
+  </div>
+  <div class="err" id="bErr"></div>
+  <div class="acts"><button class="btn" data-close>Vazgeç</button><button class="btn btn-green" id="bGo">Ekle</button></div>
+</div></div>
 
 <!-- BÖLÜM SIRASI -->
 <div class="dlg hidden" id="secDlg"><div>
@@ -220,9 +252,9 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 'use strict';
 const OWNER = 'kaanaynagoz', REPO = 'kastamonu-elektrik', BRANCH = 'main';
 const PAGES = [
-  { path: 'index.html', label: 'Ana Sayfa', dir: '/', img: 'images/' },
-  { path: 'dizel-jenerator/index.html', label: 'Dizel Jeneratörler', dir: '/dizel-jenerator/', img: '../images/' },
-  { path: 'eski/index.html', label: 'Eski Tasarım (/eski)', dir: '/eski/', img: '../images/' }
+  { path: 'index.html', label: 'Ana Sayfa', dir: '/', img: 'images/', btns: true },
+  { path: 'dizel-jenerator/index.html', label: 'Dizel Jeneratörler', dir: '/dizel-jenerator/', img: '../images/', btns: true },
+  { path: 'eski/index.html', label: 'Eski Tasarım (/eski)', dir: '/eski/', img: '../images/', btns: false }
 ];
 const TOKEN_KEY = 'ke_admin_token';
 const $ = id => document.getElementById(id);
@@ -332,6 +364,7 @@ function prepare(d){
   d.querySelectorAll('body img').forEach((el, i) => el.setAttribute('data-adm-i', i));
   d.querySelectorAll('body a').forEach((el, i) => el.setAttribute('data-adm-a', i));
   Array.from(d.body.children).filter(el => el.tagName === 'SECTION').forEach((el, i) => el.setAttribute('data-adm-s', i));
+  d.body.querySelectorAll('*').forEach((el, i) => el.setAttribute('data-adm-e', i));
 }
 function meta(d, sel){ const m = d.querySelector(sel); return m ? m.getAttribute('content') || '' : ''; }
 
@@ -404,7 +437,9 @@ function wireFrame(){
     else {
       // buton içindeki yazı gibi doğrudan tıklanamayan yerler
       const inner = a && a.querySelector(EDIT);
-      if (inner) select({ type: 'text', el: inner }); else select(null);
+      if (inner) select({ type: 'text', el: inner });
+      else if (a && btnOf(a)) select({ type: 'btn', el: a });
+      else select(null);
     }
   }, true);
   fdoc.addEventListener('submit', e => e.preventDefault(), true);
@@ -430,17 +465,18 @@ function wireFrame(){
 function select(s){
   if (sel && sel.el) sel.el.classList.remove('adm-sel');
   sel = s;
-  if (s && s.type === 'img') s.el.classList.add('adm-sel');
+  if (s && (s.type === 'img' || s.type === 'btn')) s.el.classList.add('adm-sel');
   showPanel(s);
 }
 function showPanel(s){
   $('panel').classList.toggle('hidden', !s);
   $('pText').classList.toggle('hidden', !s || s.type !== 'text');
   $('pImg').classList.toggle('hidden', !s || s.type !== 'img');
+  showBtnBox(s);
   const card = s && refCard(s.el);
   $('pRef').classList.toggle('hidden', !card);
   if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; refPosUpdate(card); }
-  if (!s) return;
+  if (!s || s.type === 'btn') return;
   const link = s.el.closest('a[data-adm-a]');
   if (s.type === 'text') {
     $('tVal').value = s.el.textContent;
@@ -517,6 +553,115 @@ $('cReset').onclick = () => {
   else el.removeAttribute('data-adm-color');
   $('cVal').value = toHex(getComputedStyle(el).color); $('cReset').disabled = !el.hasAttribute('data-adm-color'); updateCount();
 };
+
+// ---------- butonlar ----------
+// Kaldırılabilir butonlar; formu, menüyü ya da pencereleri bozacak olanlar hariç
+const BTN = 'a.btn, button.btn, a.more, a.icon-btn, .fab a';
+function btnOf(el){
+  const b = el.closest(BTN);
+  if (!b || !page.btns) return null;
+  if (b.closest('form') || b.id === 'mobile-menu-btn' || b.closest('#quote-modal') || b.type === 'submit') return null;
+  return b;
+}
+const topNew = () => fdoc ? Array.from(fdoc.querySelectorAll('[data-adm-newwrap], [data-adm-newbtn]')).filter(n => !n.parentElement.closest('[data-adm-newwrap]')) : [];
+let btnTarget = null;
+function showBtnBox(s){
+  const box = $('pBtn');
+  if (!s || !page.btns) { box.classList.add('hidden'); return; }
+  const b = btnOf(s.el);
+  box.classList.remove('hidden');
+  $('pBtnH').textContent = b ? 'Buton' : 'Buton ekle';
+  $('btnDel').classList.toggle('hidden', !b);
+  $('btnAdd').textContent = b ? '+ Yanına yeni buton ekle' : '+ Bu öğenin altına buton ekle';
+  const newA = b && b.matches('a[data-adm-newbtn]') ? b : null;
+  $('pBtnLinkBox').classList.toggle('hidden', !(s.type === 'btn' && b && b.tagName === 'A' && !newA) && !newA);
+  if (!$('pBtnLinkBox').classList.contains('hidden')) $('pBtnHref').value = b.getAttribute('href') || '';
+  $('btnNote').textContent = newA ? 'Bu buton yeni eklendi; yazısını butonun üstüne tıklayarak değiştirebilirsiniz.' : '';
+}
+$('pBtnHref').addEventListener('input', () => { const b = sel && btnOf(sel.el); if (b && b.tagName === 'A') { b.setAttribute('href', $('pBtnHref').value.trim()); updateCount(); } });
+$('pBtnHref').addEventListener('change', () => { $('pBtnHref').value = normHref($('pBtnHref').value) || $('pBtnHref').value; $('pBtnHref').dispatchEvent(new Event('input')); });
+$('btnDel').onclick = () => {
+  const b = sel && btnOf(sel.el); if (!b) return;
+  if (!confirm('Bu buton sayfadan kaldırılsın mı?')) return;
+  select(null);
+  if (b.hasAttribute('data-adm-newbtn')) {
+    const w = b.closest('[data-adm-newwrap]'); b.remove();
+    if (w && !w.querySelector('[data-adm-newbtn]')) w.remove();
+  } else { b.setAttribute('data-adm-del', '1'); b.style.setProperty('display', 'none', 'important'); }
+  updateCount(); toast('Buton kaldırıldı. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
+};
+let bStyle = 'btn-green';
+document.querySelectorAll('#bStyles button').forEach(x => x.onclick = () => { bStyle = x.dataset.s; document.querySelectorAll('#bStyles button').forEach(y => y.classList.toggle('on', y === x)); });
+$('btnAdd').onclick = () => {
+  if (!sel) return;
+  btnTarget = sel.el;
+  const b = btnOf(btnTarget);
+  $('bWhere').textContent = b ? 'Seçtiğiniz butonun yanına eklenecek.' : 'Seçtiğiniz öğenin hemen altına eklenecek.';
+  $('bText').value = ''; $('bHref').value = ''; $('bErr').textContent = '';
+  openDlg('btnDlg'); $('bText').focus();
+};
+// Sayfadaki mevcut bir ikonu kopyala (telefon / WhatsApp)
+function iconFor(href){
+  let src = null;
+  if (/^tel:/i.test(href)) src = fdoc.querySelector('a[href^="tel:"] svg');
+  else if (/wa\.me|whatsapp/i.test(href)) src = fdoc.querySelector('a[href*="wa.me"] svg');
+  return src ? src.cloneNode(true) : null;
+}
+$('bGo').onclick = () => {
+  const text = $('bText').value.trim(), href = normHref($('bHref').value);
+  if (!text) { $('bErr').textContent = 'Buton yazısını girin.'; return; }
+  if (!href) { $('bErr').textContent = 'Butonun gideceği adresi girin.'; return; }
+  const a = fdoc.createElement('a');
+  a.className = 'btn ' + bStyle; a.setAttribute('href', href); a.setAttribute('data-adm-newbtn', '1');
+  if (/^https?:/i.test(href)) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); }
+  const ic = iconFor(href); if (ic) { a.appendChild(ic); a.appendChild(fdoc.createTextNode(' ')); }
+  const t = fdoc.createElement('adm-t'); t.setAttribute('data-adm-nt', ''); t.textContent = text;
+  t.contentEditable = plainOK ? 'plaintext-only' : 'true'; t.spellcheck = false; a.appendChild(t);
+  const ref = btnTarget, b = btnOf(ref);
+  if (b) { b.after(fdoc.createTextNode(' '), a); }
+  else {
+    let blk = ref.closest('p,h1,h2,h3,h4,li,ul,ol,figure') || ref.parentElement;
+    if (blk.tagName === 'LI') blk = blk.parentElement;
+    const nx = blk.nextElementSibling;
+    if (nx && nx.hasAttribute('data-adm-newwrap')) nx.appendChild(a);
+    else {
+      const w = fdoc.createElement('div'); w.setAttribute('data-adm-newwrap', '1');
+      const center = getComputedStyle(blk).textAlign === 'center';
+      w.setAttribute('style', 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;justify-content:' + (center ? 'center' : 'flex-start'));
+      w.appendChild(a); blk.after(w);
+    }
+  }
+  $('btnDlg').classList.add('hidden');
+  a.scrollIntoView({ block: 'center' }); select({ type: 'btn', el: a }); updateCount();
+  toast('Buton eklendi. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
+};
+// Kayıtta: kaldırılan butonları sil, yeni butonları aynı yere ekle
+function syncButtons(d){
+  fdoc.querySelectorAll('[data-adm-del]').forEach(f => {
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (t) t.remove();
+  });
+  const made = new Map();
+  topNew().forEach(f => {
+    const c = f.cloneNode(true);
+    c.querySelectorAll('adm-t').forEach(x => x.replaceWith(fdoc.createTextNode(x.textContent)));
+    [c, ...c.querySelectorAll('*')].forEach(el => {
+      Array.from(el.attributes).forEach(at => { if (/^data-adm|^contenteditable$|^spellcheck$/i.test(at.name)) el.removeAttribute(at.name); });
+      el.classList.remove('adm-sel'); if (el.getAttribute('class') === '') el.removeAttribute('class');
+    });
+    const tpl = d.createElement('template'); tpl.innerHTML = c.outerHTML; const node = d.importNode(tpl.content.firstElementChild, true);
+    let p = f.previousElementSibling, placed = false;
+    while (p && !placed) {
+      const tgt = p.hasAttribute('data-adm-e') ? d.querySelector('[data-adm-e="' + p.getAttribute('data-adm-e') + '"]') : made.get(p);
+      if (tgt) { tgt.after(d.createTextNode(' '), node); placed = true; }
+      p = p.previousElementSibling;
+    }
+    if (!placed) {
+      const par = f.parentElement, tp = par && d.querySelector('[data-adm-e="' + par.getAttribute('data-adm-e') + '"]');
+      if (tp) tp.prepend(node);
+    }
+    made.set(f, node);
+  });
+}
 
 // ---------- bölüm sırası ----------
 const SEC_NAMES = { anasayfa: 'Giriş', hizmetler: 'Hizmetler', kurumsal: 'Kurumsal', jeneratorler: 'Benzinli Jeneratörler', dizel: 'Dizel Jeneratörler',
@@ -779,6 +924,7 @@ function changeCount(){
     if (refOrder.filter(k => cur.includes(k)).join() !== cur.join()) n++;
   }
   if (curSecOrder().join() !== secOrder.join()) n++;
+  n += fdoc.querySelectorAll('[data-adm-del]').length + topNew().length;
   n += seo ? 1 : 0;
   return n;
 }
@@ -794,6 +940,7 @@ window.addEventListener('beforeunload', e => { if (changeCount()) { e.preventDef
 function buildHtml(){
   const d = doc.cloneNode(true);
   syncRefs(d);
+  syncButtons(d);
   applySecOrder(d, curSecOrder());
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => {
     const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (t) t.textContent = s.textContent;
@@ -864,6 +1011,7 @@ function buildHtml(){
   d.querySelectorAll('[data-adm-a]').forEach(el => el.removeAttribute('data-adm-a'));
   d.querySelectorAll('[data-adm-refs]').forEach(el => el.removeAttribute('data-adm-refs'));
   d.querySelectorAll('[data-adm-s]').forEach(el => el.removeAttribute('data-adm-s'));
+  d.querySelectorAll('[data-adm-e]').forEach(el => el.removeAttribute('data-adm-e'));
   d.body.normalize();
   // Dosya biçimini mümkün olduğunca koru (gereksiz farklar oluşmasın)
   return ('<!DOCTYPE html>\n' + d.documentElement.outerHTML + '\n')
