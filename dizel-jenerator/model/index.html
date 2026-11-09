@@ -24,12 +24,12 @@
     <meta name="theme-color" content="#0b1b33">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Kastamonu Elektrik">
-    <meta property="og:image" content="https://kastamonuelektrik.com/images/og-image.jpg">
+    <meta property="og:image" content="https://www.kastamonuelektrik.com/images/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Kastamonu Elektrik - Teksan Jeneratör ve Elektrik Taahhüt">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://kastamonuelektrik.com/images/og-image.jpg">
+    <meta name="twitter:image" content="https://www.kastamonuelektrik.com/images/og-image.jpg">
     <meta property="og:locale" content="tr_TR">
     <meta property="og:title" content="Kastamonu Elektrik | Teksan Jeneratör ve Elektrik Taahhüt">
     <meta property="og:description" content="Teksan jeneratör satış ve servisi ve elektrik taahhüt. Kastamonu'da 7/24 teknik destek.">
@@ -458,8 +458,14 @@
             const setMeta = (sel, attr, val) => { let m = document.querySelector(sel); if (!m) { m = document.createElement(sel.startsWith('link') ? 'link' : 'meta'); attr.forEach(([k, v]) => m.setAttribute(k, v)); document.head.appendChild(m); } m.setAttribute(sel.startsWith('link') ? 'href' : 'content', val); };
             const tab = document.querySelector('meta[name="ke-tab-title"]'); if (tab) tab.setAttribute('content', R.m + ' | Kastamonu Elektrik');
             setMeta('meta[name="description"]', [['name', 'description']], title + ': güç değerleri, ölçüler, motor ve alternatör özellikleri. Kastamonu Elektrik\'ten fiyat ve stok bilgisi alın.');
-            setMeta('link[rel="canonical"]', [['rel', 'canonical']], 'https://kastamonuelektrik.com/dizel-jenerator/model/?m=' + slug);
+            setMeta('link[rel="canonical"]', [['rel', 'canonical']], 'https://www.kastamonuelektrik.com/dizel-jenerator/model/?m=' + slug);
             $('md-crumb').textContent = R.m;
+            const ld = document.createElement('script'); ld.type = 'application/ld+json';
+            ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: 'https://www.kastamonuelektrik.com/' },
+                { '@type': 'ListItem', position: 2, name: 'Dizel Jeneratörler', item: 'https://www.kastamonuelektrik.com/dizel-jenerator/' },
+                { '@type': 'ListItem', position: 3, name: R.m, item: 'https://www.kastamonuelektrik.com/dizel-jenerator/model/?m=' + slug }] });
+            document.head.appendChild(ld);
             const img = M.img ? '/images/dizel/b/' + M.img : '/images/dizel/' + R.th;
             const wa = 'https://wa.me/905433205037?text=' + encodeURIComponent('Merhaba, ' + title + ' için fiyat ve stok bilgisi almak istiyorum.');
             const vars = D.rows.filter(r => r[0] === R.m && slugOf(r[10]) !== slug)
