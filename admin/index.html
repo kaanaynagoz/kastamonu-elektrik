@@ -64,6 +64,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .bicons button.on{border-color:#65b632;box-shadow:0 0 0 3px rgba(101,182,50,.2);color:#4f9824}
 .bicons button.txt{font-size:10.5px;font-weight:700;line-height:1.1}
 .bicons .ico{width:1em;height:1em}
+.cur-ico{display:inline-flex;font-size:16px;color:#0b1b33}.cur-ico .ico,.cur-ico svg{width:1em;height:1em}
 .bicons .sep{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);margin-top:4px}
 .bstyles{display:flex;flex-wrap:wrap;gap:8px}
 .bstyles button{padding:8px 14px;border-radius:10px;border:0;font-weight:700;cursor:pointer;font-size:13.5px;outline:2px solid transparent;outline-offset:2px}
@@ -166,7 +167,8 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
           <label for="pBtnHref">Butonun gittiği adres</label>
           <input id="pBtnHref" class="inp" type="text">
         </div>
-        <button class="btn" id="btnDel" style="width:100%;margin-top:10px;color:var(--red)">Bu butonu kaldır</button>
+        <button class="btn" id="btnIcon" style="width:100%;margin-top:10px"><span id="btnIconNow" class="cur-ico"></span> Simgeyi değiştir</button>
+        <button class="btn" id="btnDel" style="width:100%;margin-top:8px;color:var(--red)">Bu butonu kaldır</button>
         <button class="btn btn-green" id="btnAdd" style="width:100%;margin-top:8px">+ Buraya buton ekle</button>
         <p class="muted" id="btnNote" style="font-size:12px;margin:8px 0 0"></p>
       </div>
@@ -204,6 +206,14 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
   <div class="muted" id="bIconName" style="font-size:12px;margin-top:6px">Otomatik: telefon ve WhatsApp adreslerine uygun simge eklenir.</div>
   <div class="err" id="bErr"></div>
   <div class="acts"><button class="btn" data-close>Vazgeç</button><button class="btn btn-green" id="bGo">Ekle</button></div>
+</div></div>
+
+<!-- SİMGE DEĞİŞTİR -->
+<div class="dlg hidden" id="iconDlg"><div>
+  <h3>Butonun simgesi</h3>
+  <p class="muted" style="margin:0 0 12px">Bir simgeye tıklayın; butondaki simge hemen değişir. "Yok" simgeyi kaldırır.</p>
+  <div id="iIcons" class="bicons"></div>
+  <div class="acts"><button class="btn btn-green" data-close>Tamam</button></div>
 </div></div>
 
 <!-- BÖLÜM SIRASI -->
@@ -582,6 +592,8 @@ function showBtnBox(s){
   box.classList.remove('hidden');
   $('pBtnH').textContent = b ? 'Buton' : 'Buton ekle';
   $('btnDel').classList.toggle('hidden', !b);
+  $('btnIcon').classList.toggle('hidden', !b);
+  if (b) { const sv = btnSvg(b); $('btnIconNow').innerHTML = sv ? sv.outerHTML : ''; }
   $('btnAdd').textContent = b ? '+ Yanına yeni buton ekle' : '+ Bu öğenin altına buton ekle';
   const newA = b && b.matches('a[data-adm-newbtn]') ? b : null;
   $('pBtnLinkBox').classList.toggle('hidden', !(s.type === 'btn' && b && b.tagName === 'A' && !newA) && !newA);
@@ -634,6 +646,31 @@ function iconFromLib(key){
   const i = ICON_LIB.find(x => x.k === key); if (!i) return null;
   const t = fdoc.createElement('template'); t.innerHTML = i.s; return t.content.firstElementChild;
 }
+// Butonun simgesi: butonun doğrudan içindeki ilk svg (yazıdan önce ya da sonra olabilir)
+function btnSvg(b){ return Array.from(b.children).find(c => c.tagName.toLowerCase() === 'svg') || null; }
+(function buildChangePicker(){
+  const box = $('iIcons');
+  const add = (key, html, title, cls) => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.k = key; b.title = title; b.setAttribute('aria-label', title);
+    if (cls) b.className = cls; b.innerHTML = html; b.onclick = () => setBtnIcon(key, b); box.appendChild(b);
+  };
+  const sep = t => { const d = document.createElement('div'); d.className = 'sep'; d.textContent = t; box.appendChild(d); };
+  add('none', 'Yok', 'Simgeyi kaldır', 'txt');
+  sep('Sitedeki simgeler'); ICON_LIB.slice(0, 23).forEach(i => add(i.k, i.s, i.l));
+  sep('Sektöre özel simgeler'); ICON_LIB.slice(23).forEach(i => add(i.k, i.s, i.l));
+})();
+function setBtnIcon(key, chip){
+  const b = sel && btnOf(sel.el); if (!b) return;
+  const old = btnSvg(b), nw = key === 'none' ? null : iconFromLib(key);
+  if (old && nw) old.replaceWith(nw);
+  else if (old && !nw) { const nx = old.nextSibling; old.remove(); if (nx && nx.nodeType === 3) nx.nodeValue = nx.nodeValue.replace(/^\s+/, ''); }
+  else if (!old && nw) b.prepend(nw, fdoc.createTextNode(' '));
+  b.setAttribute('data-adm-icon', key);
+  $('iIcons').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === chip));
+  const sv = btnSvg(b); $('btnIconNow').innerHTML = sv ? sv.outerHTML : '';
+  updateCount();
+}
+$('btnIcon').onclick = () => { $('iIcons').querySelectorAll('button').forEach(x => x.classList.remove('on')); openDlg('iconDlg'); };
 // Sayfadaki mevcut bir ikonu kopyala (telefon / WhatsApp)
 function iconFor(href){
   let src = null;
@@ -672,6 +709,22 @@ $('bGo').onclick = () => {
 };
 // Kayıtta: kaldırılan butonları sil, yeni butonları aynı yere ekle
 function syncButtons(d){
+  fdoc.querySelectorAll('[data-adm-icon][data-adm-e]').forEach(f => {
+    if (f.hasAttribute('data-adm-del')) return;
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (!t) return;
+    const old = btnSvg(t), fs = btnSvg(f);
+    let nw = null;
+    if (fs) {
+      const c = fs.cloneNode(true);
+      [c, ...c.querySelectorAll('*')].forEach(el => Array.from(el.attributes).forEach(at => { if (/^data-adm/.test(at.name)) el.removeAttribute(at.name); }));
+      const tpl = d.createElement('template'); tpl.innerHTML = c.outerHTML; nw = d.importNode(tpl.content.firstElementChild, true);
+    }
+    if (old && nw) old.replaceWith(nw);
+    else if (old && !nw) {
+      const nx = old.nextSibling; old.remove();
+      if (nx && nx.nodeType === 3 && /^\s/.test(nx.nodeValue)) nx.nodeValue = nx.nodeValue.replace(/^\s+/, '');
+    } else if (!old && nw) { t.prepend(nw, d.createTextNode(' ')); }
+  });
   fdoc.querySelectorAll('[data-adm-del]').forEach(f => {
     const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (t) t.remove();
   });
@@ -960,6 +1013,7 @@ function changeCount(){
   }
   if (curSecOrder().join() !== secOrder.join()) n++;
   n += fdoc.querySelectorAll('[data-adm-del]').length + topNew().length;
+  n += fdoc.querySelectorAll('[data-adm-icon]:not([data-adm-newbtn])').length;
   n += seo ? 1 : 0;
   return n;
 }
