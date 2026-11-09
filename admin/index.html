@@ -51,7 +51,6 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .panel h3{margin:0 0 4px;font-size:15px;color:var(--ink)}
 .thumb{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:repeating-conic-gradient(#f1f4f8 0% 25%,#fff 0% 50%) 50%/16px 16px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:120px}
 .thumb img{max-width:100%;max-height:200px}
-.help li{margin-bottom:6px}
 @media(max-width:900px){.main{flex-direction:column}.panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:42vh}.bar .ttl{display:none}}
 
 /* diyaloglar */
@@ -101,16 +100,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
   </div>
   <div class="main">
     <div class="stage"><iframe id="frame" title="Sayfa önizleme"></iframe></div>
-    <aside class="panel" id="panel">
-      <div id="pHelp">
-        <h3>Nasıl kullanılır?</h3>
-        <ul class="help muted" style="padding-left:18px;line-height:1.5">
-          <li><b>Yazı:</b> Sayfadaki bir yazıya tıklayın ve doğrudan yazın. Yazı burada da açılır.</li>
-          <li><b>Görsel:</b> Bir görsele tıklayın, sonra <i>Yeni görsel seç</i>.</li>
-          <li><b>Link / telefon:</b> Bir butona veya linke tıklayınca adresi burada değiştirebilirsiniz.</li>
-          <li>Bitince <b>Kaydet ve Yayınla</b>. Site birkaç dakika içinde güncellenir.</li>
-        </ul>
-      </div>
+    <aside class="panel hidden" id="panel">
       <div id="pText" class="hidden">
         <h3>Yazı</h3>
         <textarea id="tVal" class="inp" rows="4"></textarea>
@@ -349,7 +339,7 @@ function select(s){
   showPanel(s);
 }
 function showPanel(s){
-  $('pHelp').classList.toggle('hidden', !!s);
+  $('panel').classList.toggle('hidden', !s);
   $('pText').classList.toggle('hidden', !s || s.type !== 'text');
   $('pImg').classList.toggle('hidden', !s || s.type !== 'img');
   if (!s) return;
