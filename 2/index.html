@@ -6,14 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preload" as="image" href="../images/img-4-b73f56f9.jpg" fetchpriority="high">
     <title>Kastamonu Elektrik | Teksan Jeneratör ve Elektrik Taahhüt</title>
+    <meta name="ke-tab-title" content="Kastamonu Elektrik">
+    <meta name="ke-tab-away" content="Güvenli Güç Burada..">
     <script>
-    // Google ve paylaşım önizlemeleri uzun başlığı görür; ziyaretçi sayfayla etkileşime geçince sekmede kısa başlık gösterilir.
-    (function(){var cur=document.title,SHORT="Kastamonu Elektrik",AWAY="Güvenli Güç Burada..",ev=["pointerdown","keydown","touchstart","wheel","scroll","pointermove"],p0=null;
-    function show(){document.title=document.hidden?AWAY:cur}
+    // Sekme başlığı: Google <title>'ı görür; ziyaretçi sayfayla etkileşime geçince sekmede "ke-tab-title",
+    // başka sekmeye geçince "ke-tab-away" gösterilir. İkisi de yönetim panelinden değiştirilebilir.
+    (function(){function m(n){var e=document.querySelector('meta[name="'+n+'"]');return e?e.getAttribute("content"):""}
+    var cur=document.title,ev=["pointerdown","keydown","touchstart","wheel","scroll","pointermove"],p0=null;
+    function show(){var a=m("ke-tab-away");document.title=document.hidden&&a?a:cur}
     function shorten(e){
         // Fare hareketi: tek bir otomatik olayla değil, gerçekten hareket edince say
         if(e.type==="pointermove"){if(!p0){p0=[e.clientX,e.clientY];return}if(Math.abs(e.clientX-p0[0])+Math.abs(e.clientY-p0[1])<20)return}
-        cur=SHORT;show();ev.forEach(function(n){removeEventListener(n,shorten,true)})}
+        cur=m("ke-tab-title")||cur;show();ev.forEach(function(n){removeEventListener(n,shorten,true)})}
     ev.forEach(function(n){addEventListener(n,shorten,{capture:true,passive:true})});
     document.addEventListener("visibilitychange",show)})();
     </script>

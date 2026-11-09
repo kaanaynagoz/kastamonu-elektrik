@@ -51,6 +51,8 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .panel h3{margin:0 0 4px;font-size:15px;color:var(--ink)}
 .thumb{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:repeating-conic-gradient(#f1f4f8 0% 25%,#fff 0% 50%) 50%/16px 16px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:120px}
 .thumb img{max-width:100%;max-height:200px}
+.sw{width:26px;height:26px;border-radius:50%;border:1px solid #cfd8e3;cursor:pointer;padding:0}
+.sw:hover{transform:scale(1.12)}
 @media(max-width:900px){.main{flex-direction:column}.panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:42vh}.bar .ttl{display:none}}
 
 /* diyaloglar */
@@ -91,7 +93,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
     <button class="btn btn-ghost on" data-dev="desktop">Masaüstü</button>
     <button class="btn btn-ghost" data-dev="mobile">Mobil</button>
     <button class="btn btn-ghost" id="findBtn">Bul &amp; Değiştir</button>
-    <button class="btn btn-ghost" id="seoBtn">Google Başlığı</button>
+    <button class="btn btn-ghost" id="seoBtn">Başlıklar</button>
     <button class="btn btn-ghost" id="refAddBtn">+ Referans Ekle</button>
     <span class="sp"></span>
     <span class="cnt" id="cnt">Değişiklik yok</span>
@@ -105,6 +107,20 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
       <div id="pText" class="hidden">
         <h3>Yazı</h3>
         <textarea id="tVal" class="inp" rows="4"></textarea>
+        <div id="colorBox">
+          <label for="cVal">Yazı rengi</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input type="color" id="cVal" style="width:44px;height:36px;padding:2px;border:1px solid #cfd8e3;border-radius:8px;background:#fff;cursor:pointer" title="Renk seç">
+            <button class="sw" data-c="#65b632" style="background:#65b632" title="Yeşil"></button>
+            <button class="sw" data-c="#1da1f2" style="background:#1da1f2" title="Mavi"></button>
+            <button class="sw" data-c="#0b1b33" style="background:#0b1b33" title="Lacivert"></button>
+            <button class="sw" data-c="#1c2738" style="background:#1c2738" title="Koyu gri"></button>
+            <button class="sw" data-c="#ffffff" style="background:#fff" title="Beyaz"></button>
+            <button class="sw" data-c="#d64545" style="background:#d64545" title="Kırmızı"></button>
+            <button class="sw" data-c="#f59e0b" style="background:#f59e0b" title="Turuncu"></button>
+          </div>
+          <button class="btn" id="cReset" style="width:100%;margin-top:8px">Varsayılan renge dön</button>
+        </div>
         <div id="linkBox" class="hidden">
           <label for="hVal">Link adresi</label>
           <input id="hVal" class="inp" type="text">
@@ -129,6 +145,11 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
       <div id="pRef" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
         <h3>Referans</h3>
         <p class="muted" id="pRefName" style="margin:2px 0 10px"></p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn" id="refPrevBtn" style="flex:1">◀ Öne al</button>
+          <button class="btn" id="refNextBtn" style="flex:1">Arkaya al ▶</button>
+        </div>
+        <div class="muted" id="refPos" style="font-size:12px;margin:-2px 0 10px;text-align:center"></div>
         <button class="btn" id="refDelBtn" style="width:100%;color:var(--red)">Bu referansı kaldır</button>
       </div>
     </aside>
@@ -163,9 +184,13 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 
 <!-- GOOGLE BAŞLIĞI -->
 <div class="dlg hidden" id="seoDlg"><div>
-  <h3>Google'da görünen bilgiler</h3>
-  <label for="sTitle">Sayfa başlığı</label><input id="sTitle" class="inp">
-  <label for="sDesc">Açıklama</label><textarea id="sDesc" class="inp" rows="3"></textarea>
+  <h3>Başlıklar ve Google bilgileri</h3>
+  <label for="sTitle">Google'da görünen başlık</label><input id="sTitle" class="inp">
+  <label for="sTab">Tarayıcı sekmesinde görünen başlık</label><input id="sTab" class="inp">
+  <div class="muted" style="font-size:12px;margin-top:5px">Ziyaretçi sayfayı kaydırınca ya da tıklayınca sekmede bu yazar. Boş bırakılırsa Google başlığı kullanılır.</div>
+  <label for="sAway">Başka sekmeye geçince sekmede görünen yazı</label><input id="sAway" class="inp">
+  <div class="muted" style="font-size:12px;margin-top:5px">Boş bırakılırsa sekme başlığı değişmez.</div>
+  <label for="sDesc">Google'da görünen açıklama</label><textarea id="sDesc" class="inp" rows="3"></textarea>
   <label for="sOgT">Paylaşım başlığı (WhatsApp, Facebook)</label><input id="sOgT" class="inp">
   <label for="sOgD">Paylaşım açıklaması</label><textarea id="sOgD" class="inp" rows="2"></textarea>
   <div class="acts"><button class="btn" data-close>Kapat</button><button class="btn btn-green" id="sGo">Uygula</button></div>
@@ -196,6 +221,7 @@ let seo = null;         // değiştirilmiş Google bilgileri
 let sel = null;         // seçili öğe
 let refTpl = null;      // yeni referans kartı için şablon (ilk kartın temiz kopyası)
 let refOrig = 0;        // sayfadaki referans sayısı (yüklendiğinde)
+let refOrder = [];      // referansların ilk sırası
 let newSeq = 0;
 const EDIT = '[data-adm-t],[data-adm-nt]';
 const IMG = 'img[data-adm-i],img[data-adm-ni]';
@@ -301,6 +327,7 @@ async function loadPage(p){
     const g = doc.querySelector('[data-adm-refs]');
     refTpl = g ? cleanCard(g.firstElementChild.cloneNode(true)).outerHTML : null;
     refOrig = g ? g.children.length : 0;
+    refOrder = g ? Array.from(g.children, c => { const im = c.querySelector('img[data-adm-i]'); return im ? im.getAttribute('data-adm-i') : ''; }) : [];
     $('refAddBtn').classList.toggle('hidden', !refTpl);
     orig = {
       t: Array.from(doc.querySelectorAll('[data-adm-t]'), s => s.textContent),
@@ -391,11 +418,14 @@ function showPanel(s){
   $('pImg').classList.toggle('hidden', !s || s.type !== 'img');
   const card = s && refCard(s.el);
   $('pRef').classList.toggle('hidden', !card);
-  if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; }
+  if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; refPosUpdate(card); }
   if (!s) return;
   const link = s.el.closest('a[data-adm-a]');
   if (s.type === 'text') {
     $('tVal').value = s.el.textContent;
+    $('colorBox').classList.toggle('hidden', !s.el.hasAttribute('data-adm-t'));
+    $('cVal').value = toHex(getComputedStyle(s.el).color);
+    $('cReset').disabled = !s.el.hasAttribute('data-adm-color') && !soloColor(s.el);
     $('linkBox').classList.toggle('hidden', !link);
     if (link) $('hVal').value = link.getAttribute('href') || '';
   } else {
@@ -439,6 +469,50 @@ $('ihVal').addEventListener('input', () => setImgLink($('ihVal').value.trim()));
 $('ihVal').addEventListener('change', () => { $('ihVal').value = normHref($('ihVal').value); setImgLink($('ihVal').value); });
 $('iUnlink').onclick = () => { $('ihVal').value = ''; setImgLink(''); };
 $('iAlt').addEventListener('input', () => { if (sel && sel.type === 'img') { sel.el.setAttribute('alt', $('iAlt').value); updateCount(); } });
+
+// ---------- yazı rengi ----------
+function toHex(c){
+  const m = (c || '').match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s\/]+([\d.]+))?/);
+  if (!m || (m[4] !== undefined && +m[4] === 0)) return '#1c2738';
+  return '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('');
+}
+// Yazı, üst öğesinin tek içeriği mi? (strict=false iken: üst öğede satır içi renk de olmalı)
+function soloColor(t, strict){
+  const par = t.parentElement; if (!par || /^(BODY|HTML)$/.test(par.tagName)) return false;
+  const only = Array.from(par.childNodes).every(n => n === t || (n.nodeType === 3 && !n.nodeValue.trim()) || n.nodeType === 8);
+  return strict ? only : (only && !!par.style.color);
+}
+function setColor(c){
+  if (!sel || sel.type !== 'text' || !sel.el.hasAttribute('data-adm-t')) return;
+  sel.el.style.color = c; sel.el.setAttribute('data-adm-color', c);
+  $('cVal').value = c; $('cReset').disabled = false; updateCount();
+}
+$('cVal').addEventListener('input', () => setColor($('cVal').value));
+document.querySelectorAll('.sw').forEach(b => b.onclick = () => setColor(b.dataset.c));
+$('cReset').onclick = () => {
+  if (!sel || sel.type !== 'text') return;
+  const el = sel.el; el.style.removeProperty('color');
+  if (soloColor(el)) { el.parentElement.style.removeProperty('color'); el.setAttribute('data-adm-color', 'reset'); }
+  else el.removeAttribute('data-adm-color');
+  $('cVal').value = toHex(getComputedStyle(el).color); $('cReset').disabled = !el.hasAttribute('data-adm-color'); updateCount();
+};
+
+// ---------- referans sırası ----------
+function refPosUpdate(card){
+  const g = card.parentElement, list = Array.from(g.children), i = list.indexOf(card);
+  $('refPrevBtn').disabled = i <= 0; $('refNextBtn').disabled = i >= list.length - 1;
+  $('refPos').textContent = 'Sıra: ' + (i + 1) + ' / ' + list.length;
+}
+function moveRef(dir){
+  const card = sel && refCard(sel.el); if (!card) return;
+  const g = card.parentElement;
+  if (dir < 0 && card.previousElementSibling) g.insertBefore(card, card.previousElementSibling);
+  if (dir > 0 && card.nextElementSibling) g.insertBefore(card.nextElementSibling, card);
+  card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  refPosUpdate(card); updateCount();
+}
+$('refPrevBtn').onclick = () => moveRef(-1);
+$('refNextBtn').onclick = () => moveRef(1);
 
 // ---------- referanslar ----------
 function imgKey(el){ return el.hasAttribute('data-adm-i') ? +el.getAttribute('data-adm-i') : el.getAttribute('data-adm-ni'); }
@@ -586,11 +660,11 @@ $('fGo').onclick = () => {
 };
 
 // ---------- Google bilgileri ----------
-function seoNow(){ return seo || { title: doc.title, desc: meta(doc, 'meta[name="description"]'), ogT: meta(doc, 'meta[property="og:title"]'), ogD: meta(doc, 'meta[property="og:description"]') }; }
-function seoOrig(){ return { title: doc.title, desc: meta(doc, 'meta[name="description"]'), ogT: meta(doc, 'meta[property="og:title"]'), ogD: meta(doc, 'meta[property="og:description"]') }; }
-$('seoBtn').onclick = () => { const s = seoNow(); $('sTitle').value = s.title; $('sDesc').value = s.desc; $('sOgT').value = s.ogT; $('sOgD').value = s.ogD; openDlg('seoDlg'); };
+function seoOrig(){ return { title: doc.title, tab: meta(doc, 'meta[name="ke-tab-title"]'), away: meta(doc, 'meta[name="ke-tab-away"]'), desc: meta(doc, 'meta[name="description"]'), ogT: meta(doc, 'meta[property="og:title"]'), ogD: meta(doc, 'meta[property="og:description"]') }; }
+function seoNow(){ return seo || seoOrig(); }
+$('seoBtn').onclick = () => { const s = seoNow(); $('sTitle').value = s.title; $('sTab').value = s.tab; $('sAway').value = s.away; $('sDesc').value = s.desc; $('sOgT').value = s.ogT; $('sOgD').value = s.ogD; openDlg('seoDlg'); };
 $('sGo').onclick = () => {
-  seo = { title: $('sTitle').value.trim(), desc: $('sDesc').value.trim(), ogT: $('sOgT').value.trim(), ogD: $('sOgD').value.trim() };
+  seo = { title: $('sTitle').value.trim(), tab: $('sTab').value.trim(), away: $('sAway').value.trim(), desc: $('sDesc').value.trim(), ogT: $('sOgT').value.trim(), ogD: $('sOgD').value.trim() };
   const o = seoOrig(); if (JSON.stringify(o) === JSON.stringify(seo)) seo = null;
   $('seoDlg').classList.add('hidden'); updateCount();
 };
@@ -606,6 +680,11 @@ function changeCount(){
   uploads.forEach((u, k) => { if (typeof k === 'number') n++; });
   const g = fdoc.querySelector('[data-adm-refs]');
   if (g) { const kept = g.querySelectorAll(':scope > :not([data-adm-new])').length; n += (refOrig - kept) + g.querySelectorAll(':scope > [data-adm-new]').length; }
+  n += fdoc.querySelectorAll('[data-adm-color]').length;
+  if (g) {
+    const cur = Array.from(g.children).filter(c => !c.hasAttribute('data-adm-new')).map(c => { const im = c.querySelector('img[data-adm-i]'); return im ? im.getAttribute('data-adm-i') : ''; });
+    if (refOrder.filter(k => cur.includes(k)).join() !== cur.join()) n++;
+  }
   n += seo ? 1 : 0;
   return n;
 }
@@ -626,6 +705,21 @@ function buildHtml(){
   });
   fdoc.querySelectorAll('a[data-adm-a]').forEach(l => {
     const t = d.querySelector('[data-adm-a="' + l.getAttribute('data-adm-a') + '"]'); if (t && l.hasAttribute('href')) t.setAttribute('href', l.getAttribute('href'));
+  });
+  // Yazı renkleri: yazı tek başına bir öğedeyse o öğeye, değilse yazıyı saran yeni bir <span>'a renk verilir
+  fdoc.querySelectorAll('[data-adm-color]').forEach(s => {
+    const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (!t) return;
+    const c = s.getAttribute('data-adm-color'), par = t.parentElement, solo = soloColor(t, true);
+    if (c === 'reset') {
+      if (!solo) return;
+      par.style.removeProperty('color');
+      if (!par.getAttribute('style')) par.removeAttribute('style');
+      if (par.tagName === 'SPAN' && !par.attributes.length) par.replaceWith(...par.childNodes);
+    } else if (solo) {
+      par.style.color = c;
+    } else {
+      const sp = d.createElement('span'); sp.style.color = c; t.replaceWith(sp); sp.appendChild(t);
+    }
   });
   fdoc.querySelectorAll('img[data-adm-i]').forEach(im => {
     const i = im.getAttribute('data-adm-i'), t = d.querySelector('[data-adm-i="' + i + '"]'); if (!t) return;
@@ -655,6 +749,14 @@ function buildHtml(){
   if (seo) {
     d.title = seo.title;
     const setMeta = (sel, v) => { const m = d.querySelector(sel); if (m) m.setAttribute('content', v); };
+    const o0 = seoOrig();
+    // Sekme başlıkları: etiket yoksa başlığın hemen altına ekle
+    [['ke-tab-title', seo.tab, o0.tab], ['ke-tab-away', seo.away, o0.away]].forEach(([n, v, ov]) => {
+      if (v === ov) return;
+      let m = d.querySelector('meta[name="' + n + '"]');
+      if (!m) { m = d.createElement('meta'); m.setAttribute('name', n); const t = d.querySelector('title'); t.after(d.createTextNode('\n    '), m); }
+      m.setAttribute('content', v);
+    });
     setMeta('meta[name="description"]', seo.desc);
     setMeta('meta[property="og:title"]', seo.ogT);
     setMeta('meta[property="og:description"]', seo.ogD);
