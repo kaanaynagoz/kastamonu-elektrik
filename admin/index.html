@@ -202,10 +202,15 @@ async function gh(path, opts){
 const repo = p => '/repos/' + OWNER + '/' + REPO + p;
 
 // ---------- giriş ----------
+const NO_WRITE = 'Anahtarın siteye yazma izni yok. GitHub\'da Settings → Developer settings → Fine-grained tokens bölümünden anahtarı açın, Edit deyin ve Permissions → Contents iznini "Read and write" yapıp kaydedin. Anahtar değişmez, aynı anahtarla devam edebilirsiniz.';
 async function login(t){
   token = t;
   const r = await gh(repo(''));
-  if (!r.permissions || !r.permissions.push) throw new Error('Bu anahtarın siteye yazma izni yok (Contents: Read and write seçilmeli).');
+  if (!r.permissions || !r.permissions.push) throw new Error(NO_WRITE);
+  // GitHub yukarıda hesabın iznini döndürür, anahtarınkini değil. Anahtarın yazma iznini
+  // zararsız bir deneme ile kontrol et (boş içerik; sitede hiçbir şeyi değiştirmez).
+  try { await gh(repo('/git/blobs'), { method: 'POST', body: { content: '', encoding: 'utf-8' } }); }
+  catch(e){ if (e.status === 403 || e.status === 404) throw new Error(NO_WRITE); throw e; }
 }
 $('loginBtn').onclick = async () => {
   const t = $('tok').value.trim(); $('loginErr').textContent = '';
@@ -558,7 +563,8 @@ $('saveBtn').onclick = async () => {
     toast('Kaydedildi. Site birkaç dakika içinde güncellenir.', false, 6000);
     await loadPage(page);
   } catch(e){
-    toast('Kaydedilemedi: ' + e.message, true, 8000);
+    if (e.status === 403) alert('Kaydedilemedi.\n\n' + NO_WRITE + '\n\nDeğişiklikleriniz kaybolmadı: bu sayfayı kapatmadan izni düzeltin, sonra tekrar "Kaydet ve Yayınla"ya basın.');
+    else toast('Kaydedilemedi: ' + e.message, true, 8000);
   } finally { busy(false); }
 };
 
@@ -574,7 +580,11 @@ document.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => {
   if (t) {
     busy(true, 'Giriş yapılıyor...');
     try { await login(t); await startApp(); busy(false); return; }
-    catch(e){ store(TOKEN_KEY, null); token = null; }
+    catch(e){
+      token = null;
+      if (e.message === NO_WRITE) { $('tok').value = t; $('loginErr').textContent = NO_WRITE; }
+      else store(TOKEN_KEY, null);
+    }
     busy(false);
   }
   $('login').classList.remove('hidden');
