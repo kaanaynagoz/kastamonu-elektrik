@@ -58,6 +58,11 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .sec-list li small{color:var(--muted);font-weight:500}
 .sec-list button{width:34px;height:34px;padding:0;border-radius:9px}
 .sec-list li.moved{border-color:var(--green);box-shadow:0 0 0 3px rgba(101,182,50,.15)}
+.opt-list{display:grid;gap:6px}
+.opt-row{display:flex;align-items:center;gap:5px}
+.opt-row input[type=radio]{width:16px;height:16px;accent-color:#65b632;flex-shrink:0;margin:0}
+.opt-row .inp{padding:7px 9px;font-size:13.5px;min-width:0}
+.opt-row button{width:28px;height:30px;padding:0;border-radius:8px;flex-shrink:0;font-size:12px}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{flex:1;border:0;background:#fff;padding:8px 4px;font-size:12.5px;font-weight:600;cursor:pointer;color:#3d4d62}
 .seg button+button{border-left:1px solid var(--line)}
@@ -164,6 +169,19 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
           <input id="ihVal" class="inp" type="text" placeholder="Link yok — eklemek için adres yazın">
           <div class="muted" style="font-size:12px;margin-top:5px">Örnek: <code>www.ornek.com</code>, <code>0543 320 50 37</code>, <code>#iletisim</code></div>
           <button class="btn" id="iUnlink" style="width:100%;margin-top:8px">Linki kaldır</button>
+        </div>
+      </div>
+      <div id="pField" class="hidden">
+        <h3 id="pFieldH">Form alanı</h3>
+        <div id="optBox">
+          <p class="muted" style="font-size:12.5px;margin:4px 0 10px">Seçeneklerin yazısını değiştirin. Yuvarlak işaretli olan sayfa açıldığında seçili gelir.</p>
+          <div id="optList" class="opt-list"></div>
+          <button class="btn" id="optAdd" type="button" style="width:100%;margin-top:8px">+ Seçenek ekle</button>
+        </div>
+        <div id="phBox">
+          <label for="phVal">Kutunun içindeki örnek yazı</label>
+          <input id="phVal" class="inp" type="text">
+          <p class="muted" style="font-size:12px;margin:6px 0 0">Kutu boşken soluk renkte görünen yazı. Başlığı (üstteki yazı) sayfada üzerine tıklayarak değiştirebilirsiniz.</p>
         </div>
       </div>
       <div id="pBtn" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
@@ -476,6 +494,8 @@ function wireFrame(){
     const a = e.target.closest('a,button,label');
     if (a) e.preventDefault();
     if (moving) { e.stopPropagation(); finishMove(e.target); return; }
+    const fld = e.target.closest('select, input[placeholder], textarea[placeholder]');
+    if (fld && fld.hasAttribute('data-adm-e')) { e.preventDefault(); select({ type: 'field', el: fld }); return; }
     const im = e.target.closest(IMG);
     const tx = e.target.closest(EDIT);
     if (im) select({ type: 'img', el: im });
@@ -489,6 +509,8 @@ function wireFrame(){
     }
   }, true);
   fdoc.addEventListener('submit', e => e.preventDefault(), true);
+  // Açılır liste önizlemede açılmasın; tıklayınca paneldeki seçenek düzenleyici açılır
+  fdoc.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('select')) e.preventDefault(); }, true);
   fdoc.addEventListener('keydown', e => {
     if (e.key === 'Escape' && moving) { $('moveCancel').click(); return; }
     if (e.key === 'Enter' && e.target.closest && e.target.closest(EDIT)) e.preventDefault();
@@ -512,7 +534,7 @@ function wireFrame(){
 function select(s){
   if (sel && sel.el) sel.el.classList.remove('adm-sel');
   sel = s;
-  if (s && (s.type === 'img' || s.type === 'btn')) s.el.classList.add('adm-sel');
+  if (s && (s.type === 'img' || s.type === 'btn' || s.type === 'field')) s.el.classList.add('adm-sel');
   showPanel(s);
 }
 function showPanel(s){
@@ -520,10 +542,11 @@ function showPanel(s){
   $('pText').classList.toggle('hidden', !s || s.type !== 'text');
   $('pImg').classList.toggle('hidden', !s || s.type !== 'img');
   showBtnBox(s);
+  showFieldBox(s);
   const card = s && refCard(s.el);
   $('pRef').classList.toggle('hidden', !card);
   if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; refPosUpdate(card); }
-  if (!s || s.type === 'btn') return;
+  if (!s || s.type === 'btn' || s.type === 'field') return;
   const link = s.el.closest('a[data-adm-a]');
   if (s.type === 'text') {
     $('tVal').value = s.el.textContent;
@@ -614,7 +637,7 @@ const topNew = () => fdoc ? Array.from(fdoc.querySelectorAll('[data-adm-newwrap]
 let btnTarget = null;
 function showBtnBox(s){
   const box = $('pBtn');
-  if (!s || !page.btns) { box.classList.add('hidden'); return; }
+  if (!s || !page.btns || s.type === 'field') { box.classList.add('hidden'); return; }
   const b = btnOf(s.el);
   box.classList.remove('hidden');
   $('pBtnH').textContent = b ? 'Buton' : 'Buton ekle';
@@ -808,6 +831,70 @@ function finishMove(target){
   if (oldWrap && oldWrap !== m.parentElement) cleanupWrap(oldWrap);
   m.scrollIntoView({ block: 'center' }); select({ type: 'btn', el: m }); updateCount();
   toast('Buton taşındı. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
+}
+
+// ---------- form alanları: açılır liste seçenekleri ve örnek yazılar ----------
+function showFieldBox(s){
+  const box = $('pField');
+  if (!s || s.type !== 'field') { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const isSel = s.el.tagName === 'SELECT';
+  $('pFieldH').textContent = isSel ? 'Açılır liste seçenekleri' : 'Form kutusu';
+  $('optBox').classList.toggle('hidden', !isSel);
+  $('phBox').classList.toggle('hidden', isSel);
+  if (isSel) renderOpts(); else $('phVal').value = s.el.getAttribute('placeholder') || '';
+}
+const curOpts = el => Array.from(el.options).map(o => ({ t: o.textContent, d: o.hasAttribute('selected') }));
+function writeOpts(el, list){
+  while (el.firstChild) el.firstChild.remove();
+  if (!list.some(o => o.d) && list.length) list[0].d = true;
+  list.forEach(o => { const op = fdoc.createElement('option'); op.textContent = o.t; if (o.d) op.setAttribute('selected', ''); el.appendChild(op); });
+  const i = list.findIndex(o => o.d); el.selectedIndex = i < 0 ? 0 : i;
+  el.setAttribute('data-adm-opts', '1'); updateCount();
+}
+function renderOpts(){
+  const el = sel.el, list = curOpts(el), box = $('optList'); box.innerHTML = '';
+  // Hiç 'selected' yoksa tarayıcı ilkini gösterir
+  if (!list.some(o => o.d) && list.length) list[0].d = true;
+  list.forEach((o, i) => {
+    const row = document.createElement('div'); row.className = 'opt-row';
+    const r = document.createElement('input'); r.type = 'radio'; r.name = 'optdef'; r.checked = o.d; r.title = 'Sayfa açıldığında seçili gelsin';
+    r.onchange = () => { list.forEach((x, j) => x.d = j === i); writeOpts(el, list); };
+    const t = document.createElement('input'); t.className = 'inp'; t.value = o.t; t.setAttribute('aria-label', 'Seçenek ' + (i + 1));
+    t.oninput = () => { list[i].t = t.value; writeOpts(el, list); };
+    const mk = (txt, title, fn, dis) => { const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = txt; b.title = title; b.disabled = !!dis; b.onclick = fn; return b; };
+    row.append(r, t,
+      mk('↑', 'Yukarı', () => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; writeOpts(el, list); renderOpts(); }, i === 0),
+      mk('↓', 'Aşağı', () => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; writeOpts(el, list); renderOpts(); }, i === list.length - 1),
+      mk('✕', 'Seçeneği sil', () => { if (list.length < 2) return; list.splice(i, 1); writeOpts(el, list); renderOpts(); }, list.length < 2));
+    box.appendChild(row);
+  });
+}
+$('optAdd').onclick = () => {
+  if (!sel || sel.type !== 'field' || sel.el.tagName !== 'SELECT') return;
+  const list = curOpts(sel.el); list.push({ t: 'Yeni seçenek', d: false }); writeOpts(sel.el, list); renderOpts();
+  const ins = $('optList').querySelectorAll('.inp'); const last = ins[ins.length - 1]; last.focus(); last.select();
+};
+$('phVal').addEventListener('input', () => {
+  if (!sel || sel.type !== 'field' || sel.el.tagName === 'SELECT') return;
+  sel.el.setAttribute('placeholder', $('phVal').value); sel.el.setAttribute('data-adm-ph', '1'); updateCount();
+});
+function syncFields(d){
+  fdoc.querySelectorAll('select[data-adm-opts]').forEach(f => {
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (!t) return;
+    // Dosyadaki girinti korunur
+    const first = t.querySelector('option'), pre = first && first.previousSibling && first.previousSibling.nodeType === 3 ? first.previousSibling.nodeValue : '\n';
+    const ind = '\n' + (pre.split('\n').pop() || ''), close = t.lastChild && t.lastChild.nodeType === 3 ? t.lastChild.nodeValue : '\n';
+    while (t.firstChild) t.firstChild.remove();
+    Array.from(f.options).forEach(o => {
+      const op = d.createElement('option'); op.textContent = o.textContent.trim(); if (o.hasAttribute('selected')) op.setAttribute('selected', '');
+      t.append(ind, op);
+    });
+    t.append(close.includes('\n') ? close : '\n');
+  });
+  fdoc.querySelectorAll('[data-adm-ph]').forEach(f => {
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (t) t.setAttribute('placeholder', f.getAttribute('placeholder') || '');
+  });
 }
 
 // Kayıtta: kaldırılan butonları sil, yeni butonları aynı yere ekle
@@ -1123,6 +1210,7 @@ function changeCount(){
   n += fdoc.querySelectorAll('[data-adm-del]').length + topNew().length;
   n += fdoc.querySelectorAll('[data-adm-icon]:not([data-adm-newbtn])').length;
   n += fdoc.querySelectorAll('[data-adm-size]:not([data-adm-newbtn]):not([data-adm-del]), [data-adm-align][data-adm-e]').length;
+  n += fdoc.querySelectorAll('[data-adm-opts], [data-adm-ph]').length;
   n += seo ? 1 : 0;
   return n;
 }
@@ -1139,6 +1227,7 @@ function buildHtml(){
   const d = doc.cloneNode(true);
   syncRefs(d);
   syncButtons(d);
+  syncFields(d);
   applySecOrder(d, curSecOrder());
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => {
     const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (t) t.textContent = s.textContent;
