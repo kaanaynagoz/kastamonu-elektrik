@@ -92,6 +92,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
     <button class="btn btn-ghost" data-dev="mobile">Mobil</button>
     <button class="btn btn-ghost" id="findBtn">Bul &amp; Değiştir</button>
     <button class="btn btn-ghost" id="seoBtn">Google Başlığı</button>
+    <button class="btn btn-ghost" id="refAddBtn">+ Referans Ekle</button>
     <span class="sp"></span>
     <span class="cnt" id="cnt">Değişiklik yok</span>
     <button class="btn btn-ghost" id="discardBtn" disabled>Vazgeç</button>
@@ -125,9 +126,31 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
           <button class="btn" id="iUnlink" style="width:100%;margin-top:8px">Linki kaldır</button>
         </div>
       </div>
+      <div id="pRef" class="hidden" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+        <h3>Referans</h3>
+        <p class="muted" id="pRefName" style="margin:2px 0 10px"></p>
+        <button class="btn" id="refDelBtn" style="width:100%;color:var(--red)">Bu referansı kaldır</button>
+      </div>
     </aside>
   </div>
 </div>
+
+<!-- REFERANS EKLE -->
+<div class="dlg hidden" id="refDlg"><div>
+  <h3>Yeni referans ekle</h3>
+  <p class="muted" style="margin:0">Kart, Referans Kurumlar bölümünün sonuna eklenir. Kaydetmeden önce önizlemede görebilirsiniz.</p>
+  <label for="rName">Kurum adı *</label><input id="rName" class="inp" placeholder="Örn: Kastamonu Üniversitesi">
+  <label>Logo *</label>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn" id="rPick" type="button">Logo seç</button>
+    <span class="muted" id="rFileName" style="font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Seçilmedi</span>
+  </div>
+  <input type="file" id="rFile" accept="image/png,image/jpeg,image/webp" class="hidden">
+  <div class="thumb hidden" id="rThumb"><img id="rPrev" alt=""></div>
+  <label for="rLink">Kurumun web sitesi (isteğe bağlı)</label><input id="rLink" class="inp" placeholder="www.ornek.com">
+  <div class="err" id="rErr"></div>
+  <div class="acts"><button class="btn" data-close>Vazgeç</button><button class="btn btn-green" id="rGo">Ekle</button></div>
+</div></div>
 
 <!-- BUL & DEĞİŞTİR -->
 <div class="dlg hidden" id="findDlg"><div>
@@ -171,6 +194,11 @@ let orig = null;        // ilk değerler
 let uploads = new Map();// görsel no -> yeni görsel
 let seo = null;         // değiştirilmiş Google bilgileri
 let sel = null;         // seçili öğe
+let refTpl = null;      // yeni referans kartı için şablon (ilk kartın temiz kopyası)
+let refOrig = 0;        // sayfadaki referans sayısı (yüklendiğinde)
+let newSeq = 0;
+const EDIT = '[data-adm-t],[data-adm-nt]';
+const IMG = 'img[data-adm-i],img[data-adm-ni]';
 
 // ---------- yardımcılar ----------
 function store(k, v){ try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} }
@@ -250,6 +278,13 @@ function prepare(d){
     const f = d.createDocumentFragment(); if (m[1]) f.append(m[1]); f.append(s); if (m[3]) f.append(m[3]);
     t.replaceWith(f);
   });
+  // Referans kartlarının bulunduğu ızgara: her çocuğu tek görsel + başlık içeren öğe
+  const sec = d.getElementById('referanslar');
+  if (sec) {
+    const g = Array.from(sec.querySelectorAll('*')).find(el => el.children.length > 1 &&
+      Array.from(el.children).every(c => c.querySelectorAll('img').length === 1 && c.querySelector('h3')));
+    if (g) g.setAttribute('data-adm-refs', '');
+  }
   d.querySelectorAll('body img').forEach((el, i) => el.setAttribute('data-adm-i', i));
   d.querySelectorAll('body a').forEach((el, i) => el.setAttribute('data-adm-a', i));
 }
@@ -263,6 +298,10 @@ async function loadPage(p){
     page = p; srcSha = r.sha; uploads = new Map(); seo = null; sel = null;
     doc = new DOMParser().parseFromString(text, 'text/html');
     prepare(doc);
+    const g = doc.querySelector('[data-adm-refs]');
+    refTpl = g ? cleanCard(g.firstElementChild.cloneNode(true)).outerHTML : null;
+    refOrig = g ? g.children.length : 0;
+    $('refAddBtn').classList.toggle('hidden', !refTpl);
     orig = {
       t: Array.from(doc.querySelectorAll('[data-adm-t]'), s => s.textContent),
       a: Array.from(doc.querySelectorAll('[data-adm-a]'), a => a.getAttribute('href') || ''),
@@ -285,10 +324,11 @@ function renderPreview(){
   pv.querySelectorAll('img[loading]').forEach(im => im.removeAttribute('loading'));
   const base = pv.createElement('base'); base.href = location.origin + page.dir; pv.head.prepend(base);
   const st = pv.createElement('style');
-  st.textContent = '[data-adm-t]{outline:1px dashed transparent;outline-offset:2px;border-radius:2px;cursor:text}' +
-    '[data-adm-t]:hover{outline-color:rgba(29,161,242,.7)}' +
-    '[data-adm-t]:focus{outline:2px solid #1da1f2;background:rgba(29,161,242,.08)}' +
-    'img[data-adm-i]{cursor:pointer}img[data-adm-i]:hover{outline:3px dashed #65b632;outline-offset:3px}' +
+  st.textContent = '[data-adm-t],[data-adm-nt]{outline:1px dashed transparent;outline-offset:2px;border-radius:2px;cursor:text}' +
+    '[data-adm-t]:hover,[data-adm-nt]:hover{outline-color:rgba(29,161,242,.7)}' +
+    '[data-adm-t]:focus,[data-adm-nt]:focus{outline:2px solid #1da1f2;background:rgba(29,161,242,.08)}' +
+    'img[data-adm-i],img[data-adm-ni]{cursor:pointer}img[data-adm-i]:hover,img[data-adm-ni]:hover{outline:3px dashed #65b632;outline-offset:3px}' +
+    '[data-adm-new]{box-shadow:0 0 0 2px #65b632!important}' +
     '.adm-sel{outline:3px solid #65b632!important;outline-offset:3px}' +
     'html{scroll-behavior:auto!important}';
   pv.head.appendChild(st);
@@ -309,28 +349,28 @@ function wireFrame(){
   fdoc.addEventListener('click', e => {
     const a = e.target.closest('a,button,label');
     if (a) e.preventDefault();
-    const im = e.target.closest('img[data-adm-i]');
-    const tx = e.target.closest('[data-adm-t]');
+    const im = e.target.closest(IMG);
+    const tx = e.target.closest(EDIT);
     if (im) select({ type: 'img', el: im });
     else if (tx) select({ type: 'text', el: tx });
     else {
       // buton içindeki yazı gibi doğrudan tıklanamayan yerler
-      const inner = a && a.querySelector('[data-adm-t]');
+      const inner = a && a.querySelector(EDIT);
       if (inner) select({ type: 'text', el: inner }); else select(null);
     }
   }, true);
   fdoc.addEventListener('submit', e => e.preventDefault(), true);
   fdoc.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-adm-t]')) e.preventDefault();
+    if (e.key === 'Enter' && e.target.closest && e.target.closest(EDIT)) e.preventDefault();
   }, true);
   fdoc.addEventListener('paste', e => {
-    if (!e.target.closest || !e.target.closest('[data-adm-t]')) return;
+    if (!e.target.closest || !e.target.closest(EDIT)) return;
     e.preventDefault();
     const t = (e.clipboardData || window.clipboardData).getData('text/plain').replace(/\s*\n\s*/g, ' ');
     fdoc.execCommand('insertText', false, t);
   }, true);
   fdoc.addEventListener('input', e => {
-    const s = e.target.closest && e.target.closest('[data-adm-t]');
+    const s = e.target.closest && e.target.closest(EDIT);
     if (s && sel && sel.el === s) $('tVal').value = s.textContent;
     updateCount();
   }, true);
@@ -349,6 +389,9 @@ function showPanel(s){
   $('panel').classList.toggle('hidden', !s);
   $('pText').classList.toggle('hidden', !s || s.type !== 'text');
   $('pImg').classList.toggle('hidden', !s || s.type !== 'img');
+  const card = s && refCard(s.el);
+  $('pRef').classList.toggle('hidden', !card);
+  if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; }
   if (!s) return;
   const link = s.el.closest('a[data-adm-a]');
   if (s.type === 'text') {
@@ -356,7 +399,7 @@ function showPanel(s){
     $('linkBox').classList.toggle('hidden', !link);
     if (link) $('hVal').value = link.getAttribute('href') || '';
   } else {
-    const i = s.el.getAttribute('data-adm-i'), u = uploads.get(+i);
+    const u = uploads.get(imgKey(s.el));
     $('iPrev').src = s.el.currentSrc || s.el.src;
     $('iAlt').value = s.el.getAttribute('alt') || '';
     $('iInfo').textContent = u ? ('Yeni görsel: ' + u.w + '×' + u.h + ' px, ' + Math.round(u.blob.size / 1024) + ' KB (kaydedilmedi)')
@@ -397,6 +440,96 @@ $('ihVal').addEventListener('change', () => { $('ihVal').value = normHref($('ihV
 $('iUnlink').onclick = () => { $('ihVal').value = ''; setImgLink(''); };
 $('iAlt').addEventListener('input', () => { if (sel && sel.type === 'img') { sel.el.setAttribute('alt', $('iAlt').value); updateCount(); } });
 
+// ---------- referanslar ----------
+function imgKey(el){ return el.hasAttribute('data-adm-i') ? +el.getAttribute('data-adm-i') : el.getAttribute('data-adm-ni'); }
+function refCard(el){ const g = el.closest('[data-adm-refs]'); if (!g) return null; let c = el; while (c && c.parentElement !== g) c = c.parentElement; return c; }
+// Kartı şablon olarak kullanılabilir hale getir: düzenleme işaretlerini ve görsel linkini kaldır
+function cleanCard(c){
+  c.querySelectorAll('adm-t').forEach(s => s.replaceWith(s.ownerDocument.createTextNode(s.textContent)));
+  [c, ...c.querySelectorAll('*')].forEach(el => Array.from(el.attributes).forEach(at => { if (/^data-adm|^id$/.test(at.name)) el.removeAttribute(at.name); }));
+  c.querySelectorAll('a').forEach(a => { if (a.querySelector('img') && onlyImg(a)) a.replaceWith(a.querySelector('img')); });
+  return c;
+}
+function makeCard(d){ const t = d.createElement('template'); t.innerHTML = refTpl; return d.importNode(t.content.firstElementChild, true); }
+
+let refFile = null;
+$('refAddBtn').onclick = () => {
+  refFile = null; $('rName').value = ''; $('rLink').value = ''; $('rErr').textContent = '';
+  $('rFileName').textContent = 'Seçilmedi'; $('rThumb').classList.add('hidden');
+  openDlg('refDlg'); $('rName').focus();
+};
+$('rPick').onclick = () => $('rFile').click();
+$('rFile').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  refFile = f; $('rFileName').textContent = f.name;
+  $('rPrev').src = URL.createObjectURL(f); $('rThumb').classList.remove('hidden');
+};
+$('rGo').onclick = async () => {
+  const name = $('rName').value.trim();
+  if (!name) { $('rErr').textContent = 'Kurum adını yazın.'; return; }
+  if (!refFile) { $('rErr').textContent = 'Logo seçin.'; return; }
+  busy(true, 'Logo hazırlanıyor...');
+  try {
+    const out = await processImage(refFile);
+    const key = 'n' + (++newSeq);
+    const fname = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '.' + out.ext;
+    const u = { blob: out.blob, w: out.w, h: out.h, url: URL.createObjectURL(out.blob), repoPath: 'images/' + fname, rel: page.img + fname };
+    uploads.set(key, u);
+    const card = makeCard(fdoc);
+    card.setAttribute('data-adm-new', key);
+    card.classList.remove('rv');
+    const h = card.querySelector('h3');
+    const t = fdoc.createElement('adm-t'); t.setAttribute('data-adm-nt', ''); t.textContent = name;
+    t.contentEditable = plainOK ? 'plaintext-only' : 'true'; t.spellcheck = false;
+    h.textContent = ''; h.appendChild(t);
+    const im = card.querySelector('img');
+    im.setAttribute('data-adm-ni', key); im.removeAttribute('srcset'); im.removeAttribute('loading');
+    im.setAttribute('src', u.url); im.setAttribute('width', u.w); im.setAttribute('height', u.h);
+    im.setAttribute('alt', name + ' logosu');
+    const link = normHref($('rLink').value);
+    if (link) im.setAttribute('data-adm-link', link);
+    fdoc.querySelector('[data-adm-refs]').appendChild(card);
+    $('refDlg').classList.add('hidden');
+    card.scrollIntoView({ block: 'center' });
+    select({ type: 'img', el: im }); updateCount();
+    toast('Referans eklendi. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
+  } catch(err){ $('rErr').textContent = 'Logo okunamadı: ' + err.message; }
+  finally { busy(false); }
+};
+$('refDelBtn').onclick = () => {
+  const card = sel && refCard(sel.el); if (!card) return;
+  const h = card.querySelector('h3'), name = h ? h.textContent.trim() : 'Bu referans';
+  if (!confirm('"' + name + '" referanslardan kaldırılsın mı?')) return;
+  card.querySelectorAll('img').forEach(im => { const key = imgKey(im), u = uploads.get(key); if (u) { URL.revokeObjectURL(u.url); uploads.delete(key); } });
+  select(null); card.remove(); updateCount();
+};
+// Kayıtta: referans ızgarasını önizlemedeki sıraya göre yeniden kur (silinenler çıkar, yeniler eklenir)
+function syncRefs(d){
+  const fg = fdoc.querySelector('[data-adm-refs]'), dg = d.querySelector('[data-adm-refs]');
+  if (!fg || !dg) return;
+  const lead = (dg.firstChild && dg.firstChild.nodeType === 3) ? dg.firstChild.nodeValue : '\n';
+  const ind = '\n' + (lead.split('\n').pop() || '                ');
+  const tail = (dg.lastChild && dg.lastChild.nodeType === 3) ? dg.lastChild.nodeValue : '\n';
+  const cards = Array.from(fg.children).map(fc => {
+    const k = fc.getAttribute('data-adm-new');
+    if (!k) { const im = fc.querySelector('img[data-adm-i]'); return im ? refCard(d.querySelector('[data-adm-i="' + im.getAttribute('data-adm-i') + '"]')) : null; }
+    const c = makeCard(d), u = uploads.get(k), fim = fc.querySelector('img'), im = c.querySelector('img');
+    c.querySelector('h3').textContent = fc.querySelector('h3').textContent.trim();
+    im.setAttribute('src', u.rel); im.setAttribute('width', u.w); im.setAttribute('height', u.h); im.removeAttribute('srcset');
+    im.setAttribute('alt', fim.getAttribute('alt') || '');
+    const add = normHref(fim.getAttribute('data-adm-link'));
+    if (add) {
+      const a = d.createElement('a'); a.setAttribute('href', add);
+      if (/^https?:/i.test(add)) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); }
+      a.setAttribute('style', 'display:contents'); im.replaceWith(a); a.appendChild(im);
+    }
+    return c;
+  }).filter(Boolean);
+  while (dg.firstChild) dg.firstChild.remove();
+  cards.forEach(c => { dg.append(ind, c); });
+  dg.append(tail.includes('\n') ? tail : '\n');
+}
+
 // ---------- görsel değiştir ----------
 $('iPick').onclick = () => $('iFile').click();
 $('iFile').onchange = async e => {
@@ -405,7 +538,7 @@ $('iFile').onchange = async e => {
   busy(true, 'Görsel hazırlanıyor...');
   try {
     const out = await processImage(f);
-    const i = +sel.el.getAttribute('data-adm-i');
+    const i = imgKey(sel.el);
     const old = uploads.get(i); if (old) URL.revokeObjectURL(old.url);
     const name = 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '.' + out.ext;
     const u = { blob: out.blob, w: out.w, h: out.h, url: URL.createObjectURL(out.blob), repoPath: 'images/' + name, rel: page.img + name };
@@ -470,7 +603,10 @@ function changeCount(){
   fdoc.querySelectorAll('a[data-adm-a]').forEach(l => { if ((l.getAttribute('href') || '') !== orig.a[+l.getAttribute('data-adm-a')]) n++; });
   fdoc.querySelectorAll('img[data-adm-i]').forEach(im => { if ((im.getAttribute('alt') || '') !== orig.alt[+im.getAttribute('data-adm-i')]) n++; });
   n += fdoc.querySelectorAll('img[data-adm-link],img[data-adm-unlink]').length;
-  n += uploads.size + (seo ? 1 : 0);
+  uploads.forEach((u, k) => { if (typeof k === 'number') n++; });
+  const g = fdoc.querySelector('[data-adm-refs]');
+  if (g) { const kept = g.querySelectorAll(':scope > :not([data-adm-new])').length; n += (refOrig - kept) + g.querySelectorAll(':scope > [data-adm-new]').length; }
+  n += seo ? 1 : 0;
   return n;
 }
 function updateCount(){
@@ -484,6 +620,7 @@ window.addEventListener('beforeunload', e => { if (changeCount()) { e.preventDef
 // ---------- kaydet ----------
 function buildHtml(){
   const d = doc.cloneNode(true);
+  syncRefs(d);
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => {
     const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (t) t.textContent = s.textContent;
   });
@@ -528,6 +665,7 @@ function buildHtml(){
   d.querySelectorAll('[data-adm-t]').forEach(s => s.replaceWith(d.createTextNode(s.textContent)));
   d.querySelectorAll('[data-adm-i]').forEach(el => el.removeAttribute('data-adm-i'));
   d.querySelectorAll('[data-adm-a]').forEach(el => el.removeAttribute('data-adm-a'));
+  d.querySelectorAll('[data-adm-refs]').forEach(el => el.removeAttribute('data-adm-refs'));
   d.body.normalize();
   // Dosya biçimini mümkün olduğunca koru (gereksiz farklar oluşmasın)
   return ('<!DOCTYPE html>\n' + d.documentElement.outerHTML + '\n')
