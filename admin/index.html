@@ -51,6 +51,13 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .panel h3{margin:0 0 4px;font-size:15px;color:var(--ink)}
 .thumb{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:repeating-conic-gradient(#f1f4f8 0% 25%,#fff 0% 50%) 50%/16px 16px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:120px}
 .thumb img{max-width:100%;max-height:200px}
+.sec-list{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.sec-list li{display:flex;align-items:center;gap:10px;padding:9px 10px 9px 14px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.sec-list li.fixed{background:var(--bg);color:var(--muted)}
+.sec-list li span{flex:1;font-weight:600}
+.sec-list li small{color:var(--muted);font-weight:500}
+.sec-list button{width:34px;height:34px;padding:0;border-radius:9px}
+.sec-list li.moved{border-color:var(--green);box-shadow:0 0 0 3px rgba(101,182,50,.15)}
 .sw{width:26px;height:26px;border-radius:50%;border:1px solid #cfd8e3;cursor:pointer;padding:0}
 .sw:hover{transform:scale(1.12)}
 @media(max-width:900px){.main{flex-direction:column}.panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:42vh}.bar .ttl{display:none}}
@@ -94,6 +101,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
     <button class="btn btn-ghost" data-dev="mobile">Mobil</button>
     <button class="btn btn-ghost" id="findBtn">Bul &amp; Değiştir</button>
     <button class="btn btn-ghost" id="seoBtn">Başlıklar</button>
+    <button class="btn btn-ghost" id="secBtn">Bölümler</button>
     <button class="btn btn-ghost" id="refAddBtn">+ Referans Ekle</button>
     <span class="sp"></span>
     <span class="cnt" id="cnt">Değişiklik yok</span>
@@ -155,6 +163,14 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
     </aside>
   </div>
 </div>
+
+<!-- BÖLÜM SIRASI -->
+<div class="dlg hidden" id="secDlg"><div>
+  <h3>Bölümlerin sırası</h3>
+  <p class="muted" style="margin:0 0 12px">Oklarla bölümleri yukarı ya da aşağı taşıyın; önizleme hemen değişir. Kalıcı olması için <b>Kaydet ve Yayınla</b>'ya basın.</p>
+  <ol id="secList" class="sec-list"></ol>
+  <div class="acts"><button class="btn" id="secReset">Eski sıraya dön</button><button class="btn btn-green" data-close>Tamam</button></div>
+</div></div>
 
 <!-- REFERANS EKLE -->
 <div class="dlg hidden" id="refDlg"><div>
@@ -223,6 +239,7 @@ let sel = null;         // seçili öğe
 let refTpl = null;      // yeni referans kartı için şablon (ilk kartın temiz kopyası)
 let refOrig = 0;        // sayfadaki referans sayısı (yüklendiğinde)
 let refOrder = [];      // referansların ilk sırası
+let secOrder = [];      // bölümlerin ilk sırası
 let newSeq = 0;
 const EDIT = '[data-adm-t],[data-adm-nt]';
 const IMG = 'img[data-adm-i],img[data-adm-ni]';
@@ -314,6 +331,7 @@ function prepare(d){
   }
   d.querySelectorAll('body img').forEach((el, i) => el.setAttribute('data-adm-i', i));
   d.querySelectorAll('body a').forEach((el, i) => el.setAttribute('data-adm-a', i));
+  Array.from(d.body.children).filter(el => el.tagName === 'SECTION').forEach((el, i) => el.setAttribute('data-adm-s', i));
 }
 function meta(d, sel){ const m = d.querySelector(sel); return m ? m.getAttribute('content') || '' : ''; }
 
@@ -328,6 +346,8 @@ async function loadPage(p){
     const g = doc.querySelector('[data-adm-refs]');
     refTpl = g ? cleanCard(g.firstElementChild.cloneNode(true)).outerHTML : null;
     refOrig = g ? g.children.length : 0;
+    secOrder = Array.from(doc.querySelectorAll('body > section[data-adm-s]'), x => x.getAttribute('data-adm-s'));
+    $('secBtn').classList.toggle('hidden', movableSecs(doc).length < 2);
     refOrder = g ? Array.from(g.children, c => { const im = c.querySelector('img[data-adm-i]'); return im ? im.getAttribute('data-adm-i') : ''; }) : [];
     $('refAddBtn').classList.toggle('hidden', !refTpl);
     orig = {
@@ -497,6 +517,78 @@ $('cReset').onclick = () => {
   else el.removeAttribute('data-adm-color');
   $('cVal').value = toHex(getComputedStyle(el).color); $('cReset').disabled = !el.hasAttribute('data-adm-color'); updateCount();
 };
+
+// ---------- bölüm sırası ----------
+const SEC_NAMES = { anasayfa: 'Giriş', hizmetler: 'Hizmetler', kurumsal: 'Kurumsal', jeneratorler: 'Benzinli Jeneratörler', dizel: 'Dizel Jeneratörler',
+  projeler: 'Projeler', referanslar: 'Referanslar', iletisim: 'İletişim', modeller: 'Model Listesi' };
+const allSecs = d => Array.from(d.querySelectorAll('body > section[data-adm-s]'));
+// Giriş bölümü (en üstteki) sabit kalır
+const isFixed = el => el.id === 'anasayfa' || el.classList.contains('hero');
+const movableSecs = d => allSecs(d).filter(el => !isFixed(el));
+const curSecOrder = () => fdoc ? allSecs(fdoc).map(x => x.getAttribute('data-adm-s')) : secOrder;
+function secName(el){
+  if (SEC_NAMES[el.id]) return SEC_NAMES[el.id];
+  const h = el.querySelector('.eyebrow, h2, h1'); return h ? h.textContent.trim().replace(/\s+/g, ' ') : 'Bölüm';
+}
+// Bölümü önündeki açıklama satırıyla (<!-- ... -->) ve boşluklarla birlikte taşı
+function secBlock(el){
+  const nodes = [el]; let n = el.previousSibling;
+  while (n && (n.nodeType === 8 || (n.nodeType === 3 && !n.nodeValue.trim()))) { nodes.unshift(n); n = n.previousSibling; }
+  return nodes;
+}
+// Açık renkli bölümlerde gri / beyaz sırasını yeniden kur (yan yana aynı renk kalmasın)
+function realternate(d){
+  let prev = 'white';
+  allSecs(d).forEach(el => {
+    if (isFixed(el)) { prev = 'white'; return; }
+    if (el.classList.contains('gens')) { prev = 'dark'; return; }
+    if (!el.classList.contains('sec')) { prev = 'other'; return; }
+    const alt = prev === 'white' || prev === 'other';
+    el.classList.toggle('sec-alt', alt); prev = alt ? 'alt' : 'white';
+  });
+}
+function applySecOrder(d, order){
+  const mov = movableSecs(d); if (mov.length < 2) return;
+  const byId = {}; allSecs(d).forEach(el => byId[el.getAttribute('data-adm-s')] = el);
+  const last = mov.reduce((a, b) => (a.compareDocumentPosition(b) & 4) ? b : a);
+  const mark = d.createComment('adm'); last.after(mark);
+  order.map(k => byId[k]).filter(el => el && !isFixed(el)).forEach(el => mark.before(...secBlock(el)));
+  mark.remove();
+  // Sadece sıra değiştiyse renkleri yeniden ayarla (dosyadaki elle verilmiş düzen bozulmasın)
+  if (order.join() !== secOrder.join()) realternate(d);
+}
+function renderSecList(){
+  const ol = $('secList'); ol.innerHTML = '';
+  const list = allSecs(fdoc), mov = list.filter(el => !isFixed(el));
+  list.forEach(el => {
+    const li = document.createElement('li'), k = el.getAttribute('data-adm-s');
+    const nm = document.createElement('span'); nm.textContent = secName(el); li.appendChild(nm);
+    if (isFixed(el)) { li.className = 'fixed'; const sm = document.createElement('small'); sm.textContent = 'sabit'; li.appendChild(sm); }
+    else {
+      const i = mov.indexOf(el);
+      if (k === lastMovedSec) li.classList.add('moved');
+      [['↑', -1, i === 0, 'Yukarı taşı'], ['↓', 1, i === mov.length - 1, 'Aşağı taşı']].forEach(([t, dir, dis, lab]) => {
+        const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = t; b.disabled = dis; b.title = lab; b.setAttribute('aria-label', secName(el) + ': ' + lab);
+        b.onclick = () => moveSec(k, dir); li.appendChild(b);
+      });
+    }
+    ol.appendChild(li);
+  });
+}
+let lastMovedSec = null;
+function moveSec(k, dir){
+  lastMovedSec = k;
+  const order = curSecOrder(), mov = order.filter(x => !isFixed(fdoc.querySelector('[data-adm-s="' + x + '"]')));
+  const i = mov.indexOf(k), j = i + dir; if (j < 0 || j >= mov.length) return;
+  [mov[i], mov[j]] = [mov[j], mov[i]];
+  const fixed = order.filter(x => !mov.includes(x));
+  applySecOrder(fdoc, fixed.concat(mov));
+  if (curSecOrder().join() === secOrder.join()) realternate(fdoc);
+  renderSecList(); updateCount();
+  const el = fdoc.querySelector('[data-adm-s="' + k + '"]'); if (el) el.scrollIntoView({ block: 'start' });
+}
+$('secBtn').onclick = () => { lastMovedSec = null; renderSecList(); openDlg('secDlg'); };
+$('secReset').onclick = () => { lastMovedSec = null; applySecOrder(fdoc, secOrder.slice()); realternate(fdoc); renderSecList(); updateCount(); };
 
 // ---------- referans sırası ----------
 function refPosUpdate(card){
@@ -686,6 +778,7 @@ function changeCount(){
     const cur = Array.from(g.children).filter(c => !c.hasAttribute('data-adm-new')).map(c => { const im = c.querySelector('img[data-adm-i]'); return im ? im.getAttribute('data-adm-i') : ''; });
     if (refOrder.filter(k => cur.includes(k)).join() !== cur.join()) n++;
   }
+  if (curSecOrder().join() !== secOrder.join()) n++;
   n += seo ? 1 : 0;
   return n;
 }
@@ -701,6 +794,7 @@ window.addEventListener('beforeunload', e => { if (changeCount()) { e.preventDef
 function buildHtml(){
   const d = doc.cloneNode(true);
   syncRefs(d);
+  applySecOrder(d, curSecOrder());
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => {
     const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (t) t.textContent = s.textContent;
   });
@@ -769,6 +863,7 @@ function buildHtml(){
   d.querySelectorAll('[data-adm-i]').forEach(el => el.removeAttribute('data-adm-i'));
   d.querySelectorAll('[data-adm-a]').forEach(el => el.removeAttribute('data-adm-a'));
   d.querySelectorAll('[data-adm-refs]').forEach(el => el.removeAttribute('data-adm-refs'));
+  d.querySelectorAll('[data-adm-s]').forEach(el => el.removeAttribute('data-adm-s'));
   d.body.normalize();
   // Dosya biçimini mümkün olduğunca koru (gereksiz farklar oluşmasın)
   return ('<!DOCTYPE html>\n' + d.documentElement.outerHTML + '\n')
