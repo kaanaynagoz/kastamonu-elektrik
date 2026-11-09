@@ -58,6 +58,11 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
 .sec-list li small{color:var(--muted);font-weight:500}
 .sec-list button{width:34px;height:34px;padding:0;border-radius:9px}
 .sec-list li.moved{border-color:var(--green);box-shadow:0 0 0 3px rgba(101,182,50,.15)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:8px 4px;font-size:12.5px;font-weight:600;cursor:pointer;color:#3d4d62}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--green);color:#fff}
+#moveBar{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:30;background:#0b1b33;color:#fff;padding:10px 14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);font-size:14px}
 .bicons{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;padding:2px}
 .bicons button{height:40px;border-radius:9px;border:1px solid var(--line);background:#fff;color:#0b1b33;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;padding:0}
 .bicons button:hover{border-color:#b8c4d3}
@@ -167,7 +172,26 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
           <label for="pBtnHref">Butonun gittiği adres</label>
           <input id="pBtnHref" class="inp" type="text">
         </div>
-        <button class="btn" id="btnIcon" style="width:100%;margin-top:10px"><span id="btnIconNow" class="cur-ico"></span> Simgeyi değiştir</button>
+        <div id="btnLayout">
+          <label>Boyut</label>
+          <div class="seg" id="bSize">
+            <button type="button" data-z="sm">Küçük</button><button type="button" data-z="">Normal</button><button type="button" data-z="lg">Büyük</button><button type="button" data-z="xl">Çok büyük</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:600;margin-top:8px;cursor:pointer"><input type="checkbox" id="bFull"> Tam genişlik</label>
+          <label>Yer</label>
+          <div style="display:flex;gap:6px">
+            <button class="btn" type="button" id="bLeft" style="flex:1">◀ Sola</button>
+            <button class="btn" type="button" id="bRight" style="flex:1">Sağa ▶</button>
+          </div>
+          <button class="btn" type="button" id="bMove" style="width:100%;margin-top:6px">Başka yere taşı…</button>
+          <div id="bAlignBox">
+            <label>Hizalama (butonun bulunduğu satır)</label>
+            <div class="seg" id="bAlign">
+              <button type="button" data-a="flex-start">Sola</button><button type="button" data-a="center">Ortaya</button><button type="button" data-a="flex-end">Sağa</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn" id="btnIcon" style="width:100%;margin-top:14px"><span id="btnIconNow" class="cur-ico"></span> Simgeyi değiştir</button>
         <button class="btn" id="btnDel" style="width:100%;margin-top:8px;color:var(--red)">Bu butonu kaldır</button>
         <button class="btn btn-green" id="btnAdd" style="width:100%;margin-top:8px">+ Buraya buton ekle</button>
         <p class="muted" id="btnNote" style="font-size:12px;margin:8px 0 0"></p>
@@ -264,6 +288,7 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
   <div class="acts"><button class="btn" data-close>Kapat</button><button class="btn btn-green" id="sGo">Uygula</button></div>
 </div></div>
 
+<div id="moveBar" class="hidden"><span>Butonun gideceği yere tıklayın: bir yazı, buton ya da görsel.</span><button class="btn" id="moveCancel" type="button">İptal</button></div>
 <div id="busy" class="hidden">Lütfen bekleyin...</div>
 <div id="toast" class="hidden"></div>
 
@@ -450,6 +475,7 @@ function wireFrame(){
   fdoc.addEventListener('click', e => {
     const a = e.target.closest('a,button,label');
     if (a) e.preventDefault();
+    if (moving) { e.stopPropagation(); finishMove(e.target); return; }
     const im = e.target.closest(IMG);
     const tx = e.target.closest(EDIT);
     if (im) select({ type: 'img', el: im });
@@ -464,6 +490,7 @@ function wireFrame(){
   }, true);
   fdoc.addEventListener('submit', e => e.preventDefault(), true);
   fdoc.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && moving) { $('moveCancel').click(); return; }
     if (e.key === 'Enter' && e.target.closest && e.target.closest(EDIT)) e.preventDefault();
   }, true);
   fdoc.addEventListener('paste', e => {
@@ -593,6 +620,8 @@ function showBtnBox(s){
   $('pBtnH').textContent = b ? 'Buton' : 'Buton ekle';
   $('btnDel').classList.toggle('hidden', !b);
   $('btnIcon').classList.toggle('hidden', !b);
+  $('btnLayout').classList.toggle('hidden', !b);
+  if (b) layoutState(b);
   if (b) { const sv = btnSvg(b); $('btnIconNow').innerHTML = sv ? sv.outerHTML : ''; }
   $('btnAdd').textContent = b ? '+ Yanına yeni buton ekle' : '+ Bu öğenin altına buton ekle';
   const newA = b && b.matches('a[data-adm-newbtn]') ? b : null;
@@ -689,26 +718,105 @@ $('bGo').onclick = () => {
   if (ic) { a.appendChild(ic); a.appendChild(fdoc.createTextNode(' ')); }
   const t = fdoc.createElement('adm-t'); t.setAttribute('data-adm-nt', ''); t.textContent = text;
   t.contentEditable = plainOK ? 'plaintext-only' : 'true'; t.spellcheck = false; a.appendChild(t);
-  const ref = btnTarget, b = btnOf(ref);
-  if (b) { b.after(fdoc.createTextNode(' '), a); }
-  else {
-    let blk = ref.closest('p,h1,h2,h3,h4,li,ul,ol,figure') || ref.parentElement;
-    if (blk.tagName === 'LI') blk = blk.parentElement;
-    const nx = blk.nextElementSibling;
-    if (nx && nx.hasAttribute('data-adm-newwrap')) nx.appendChild(a);
-    else {
-      const w = fdoc.createElement('div'); w.setAttribute('data-adm-newwrap', '1');
-      const center = getComputedStyle(blk).textAlign === 'center';
-      w.setAttribute('style', 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;justify-content:' + (center ? 'center' : 'flex-start'));
-      w.appendChild(a); blk.after(w);
-    }
-  }
+  placeAt(a, btnTarget);
   $('btnDlg').classList.add('hidden');
   a.scrollIntoView({ block: 'center' }); select({ type: 'btn', el: a }); updateCount();
   toast('Buton eklendi. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
 };
+// Butonu bir öğenin yanına (buton ise) ya da altına (yazı / görsel ise) yerleştir
+function placeAt(a, ref){
+  const b = btnOf(ref);
+  if (b && b !== a) { b.after(fdoc.createTextNode(' '), a); return; }
+  let blk = ref.closest('p,h1,h2,h3,h4,li,ul,ol,figure') || ref.parentElement;
+  if (blk.tagName === 'LI') blk = blk.parentElement;
+  const nx = blk.nextElementSibling;
+  if (nx && nx.hasAttribute('data-adm-newwrap')) { nx.appendChild(a); return; }
+  const w = fdoc.createElement('div'); w.setAttribute('data-adm-newwrap', '1');
+  const center = getComputedStyle(blk).textAlign === 'center';
+  w.setAttribute('style', 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;justify-content:' + (center ? 'center' : 'flex-start'));
+  w.appendChild(a); blk.after(w);
+}
+// Mevcut (dosyada olan) bir butonu taşırken: aslı gizlenip silinmek üzere işaretlenir,
+// yeni yerine kopyası konur. Yeni eklenmiş butonlar doğrudan taşınır.
+function movable(b){
+  if (b.hasAttribute('data-adm-newbtn')) return b;
+  const c = b.cloneNode(true);
+  [c, ...c.querySelectorAll('*')].forEach(el => {
+    ['data-adm-e', 'data-adm-a', 'data-adm-icon', 'data-adm-size', 'data-adm-color'].forEach(x => el.removeAttribute(x));
+    if (el.hasAttribute('data-adm-t')) { el.removeAttribute('data-adm-t'); el.setAttribute('data-adm-nt', ''); }
+  });
+  c.classList.remove('adm-sel'); c.setAttribute('data-adm-newbtn', '1');
+  b.setAttribute('data-adm-del', '1'); b.style.setProperty('display', 'none', 'important');
+  return c;
+}
+function cleanupWrap(w){ if (w && w.hasAttribute('data-adm-newwrap') && !w.querySelector('[data-adm-newbtn]:not([data-adm-del])')) w.remove(); }
+function siblingsBtns(b){ return Array.from(b.parentElement.children).filter(x => x !== b && btnOf(x) === x && !x.hasAttribute('data-adm-del')); }
+function layoutState(b){
+  const z = b.getAttribute('data-adm-size') || sizeOf(b);
+  $('bSize').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.z === z));
+  $('bFull').checked = b.style.width === '100%';
+  const sib = Array.from(b.parentElement.children).filter(x => btnOf(x) === x && !x.hasAttribute('data-adm-del'));
+  const i = sib.indexOf(b);
+  $('bLeft').disabled = i <= 0; $('bRight').disabled = i < 0 || i >= sib.length - 1;
+  const par = b.parentElement, pcs = getComputedStyle(par), flex = /flex/.test(pcs.display) && !/column/.test(pcs.flexDirection);
+  $('bAlignBox').classList.toggle('hidden', !flex || !par.hasAttribute('data-adm-e') && !par.hasAttribute('data-adm-newwrap'));
+  if (flex) { const j = getComputedStyle(par).justifyContent; $('bAlign').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.a === j || (x.dataset.a === 'flex-start' && /normal|start|left/.test(j)) || (x.dataset.a === 'flex-end' && /end|right/.test(j) && j !== 'flex-start'))); }
+}
+const SIZES = { sm: ['.55em 1em', '13.5px'], lg: ['1em 1.7em', '17px'], xl: ['1.15em 2.1em', '19px'] };
+function sizeOf(b){ const fs = b.style.fontSize; return fs === '13.5px' ? 'sm' : fs === '17px' ? 'lg' : fs === '19px' ? 'xl' : ''; }
+function markSize(b){ b.setAttribute('data-adm-size', '1'); }
+document.querySelectorAll('#bSize button').forEach(x => x.onclick = () => {
+  const b = sel && btnOf(sel.el); if (!b) return;
+  const v = SIZES[x.dataset.z];
+  if (v) { b.style.padding = v[0]; b.style.fontSize = v[1]; } else { b.style.removeProperty('padding'); b.style.removeProperty('font-size'); }
+  markSize(b); layoutState(b); updateCount();
+});
+$('bFull').onchange = () => {
+  const b = sel && btnOf(sel.el); if (!b) return;
+  if ($('bFull').checked) b.style.width = '100%'; else b.style.removeProperty('width');
+  markSize(b); updateCount();
+};
+document.querySelectorAll('#bAlign button').forEach(x => x.onclick = () => {
+  const b = sel && btnOf(sel.el); if (!b) return;
+  const par = b.parentElement; par.style.justifyContent = x.dataset.a; par.setAttribute('data-adm-align', '1');
+  layoutState(b); updateCount();
+});
+function shift(dir){
+  const b = sel && btnOf(sel.el); if (!b) return;
+  const sib = Array.from(b.parentElement.children).filter(x => btnOf(x) === x && !x.hasAttribute('data-adm-del'));
+  const i = sib.indexOf(b), other = sib[i + dir]; if (!other) return;
+  const m = movable(b);
+  if (dir < 0) other.before(m, fdoc.createTextNode(' ')); else other.after(fdoc.createTextNode(' '), m);
+  select({ type: 'btn', el: m }); updateCount();
+}
+$('bLeft').onclick = () => shift(-1);
+$('bRight').onclick = () => shift(1);
+let moving = null;
+$('bMove').onclick = () => {
+  const b = sel && btnOf(sel.el); if (!b) return;
+  moving = b; $('moveBar').classList.remove('hidden');
+};
+$('moveCancel').onclick = () => { moving = null; $('moveBar').classList.add('hidden'); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && moving) $('moveCancel').click(); });
+function finishMove(target){
+  const b = moving; moving = null; $('moveBar').classList.add('hidden');
+  if (!b || !target || b.contains(target)) return;
+  const tgtEl = target.closest(IMG) || target.closest(EDIT) || target.closest('a,button') || target;
+  const oldWrap = b.closest('[data-adm-newwrap]');
+  const m = movable(b);
+  placeAt(m, tgtEl);
+  if (oldWrap && oldWrap !== m.parentElement) cleanupWrap(oldWrap);
+  m.scrollIntoView({ block: 'center' }); select({ type: 'btn', el: m }); updateCount();
+  toast('Buton taşındı. Yayınlamak için "Kaydet ve Yayınla"ya basın.');
+}
+
 // Kayıtta: kaldırılan butonları sil, yeni butonları aynı yere ekle
 function syncButtons(d){
+  fdoc.querySelectorAll('[data-adm-size][data-adm-e]:not([data-adm-del]), [data-adm-align][data-adm-e]').forEach(f => {
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (!t) return;
+    const st = (f.getAttribute('style') || '').replace(/display:\s*none\s*!important;?/g, '').trim();
+    if (st) t.setAttribute('style', st); else t.removeAttribute('style');
+  });
   fdoc.querySelectorAll('[data-adm-icon][data-adm-e]').forEach(f => {
     if (f.hasAttribute('data-adm-del')) return;
     const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (!t) return;
@@ -1014,6 +1122,7 @@ function changeCount(){
   if (curSecOrder().join() !== secOrder.join()) n++;
   n += fdoc.querySelectorAll('[data-adm-del]').length + topNew().length;
   n += fdoc.querySelectorAll('[data-adm-icon]:not([data-adm-newbtn])').length;
+  n += fdoc.querySelectorAll('[data-adm-size]:not([data-adm-newbtn]):not([data-adm-del]), [data-adm-align][data-adm-e]').length;
   n += seo ? 1 : 0;
   return n;
 }
