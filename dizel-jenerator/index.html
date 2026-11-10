@@ -482,7 +482,7 @@
                 // Telefonda yana kaydırılan listelerde kartlar tek tek değil, liste bütün olarak belirsin
                 // (yoksa kaydırırken ekrana giren her kart aşağıdan yukarı kayar)
                 if (matchMedia('(max-width: 767px)').matches) {
-                    document.querySelectorAll('#gen-scroller, .refs, .svc').forEach(g => {
+                    document.querySelectorAll('#gen-scroller, .refs:not([data-mcols="2"]):not([data-mcols="3"]), .svc').forEach(g => {
                         Array.from(g.children).forEach(k => k.classList.remove('rv'));
                         g.classList.add('rv');
                     });
