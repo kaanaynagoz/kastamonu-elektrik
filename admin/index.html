@@ -223,6 +223,13 @@ label{display:block;font-size:12px;font-weight:600;color:#3d4d62;margin:12px 0 5
         </div>
         <div class="muted" id="refPos" style="font-size:12px;margin:-2px 0 10px;text-align:center"></div>
         <button class="btn" id="refDelBtn" style="width:100%;color:var(--red)">Bu referansı kaldır</button>
+        <div id="gridBox">
+          <label>Bilgisayarda kaç sütun</label>
+          <div class="seg" id="gCols"><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button><button type="button" data-v="6">6</button></div>
+          <label>Telefonda</label>
+          <div class="seg" id="gMob"><button type="button" data-v="">Yana kaydır</button><button type="button" data-v="2">2 sütun</button><button type="button" data-v="3">3 sütun</button></div>
+          <p class="muted" style="font-size:12px;margin:6px 0 0">Telefon görünümünü görmek için üstteki <b>Mobil</b> düğmesine basın.</p>
+        </div>
       </div>
     </aside>
   </div>
@@ -545,7 +552,7 @@ function showPanel(s){
   showFieldBox(s);
   const card = s && refCard(s.el);
   $('pRef').classList.toggle('hidden', !card);
-  if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; refPosUpdate(card); }
+  if (card) { const h = card.querySelector('h3'); $('pRefName').textContent = h ? h.textContent.trim() : ''; refPosUpdate(card); gridState(); }
   if (!s || s.type === 'btn' || s.type === 'field') return;
   const link = s.el.closest('a[data-adm-a]');
   if (s.type === 'text') {
@@ -1018,6 +1025,22 @@ function moveSec(k, dir){
 $('secBtn').onclick = () => { lastMovedSec = null; renderSecList(); openDlg('secDlg'); };
 $('secReset').onclick = () => { lastMovedSec = null; applySecOrder(fdoc, secOrder.slice()); realternate(fdoc); renderSecList(); updateCount(); };
 
+// ---------- referans ızgarası ----------
+function gridEl(){ return fdoc && fdoc.querySelector('[data-adm-refs]'); }
+function gridState(){
+  const g = gridEl(); $('gridBox').classList.toggle('hidden', !g || !page.btns); if (!g) return;
+  const c = g.getAttribute('data-cols') || '4', m = g.getAttribute('data-mcols') || '';
+  $('gCols').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === c));
+  $('gMob').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === m));
+}
+function setGrid(attr, v, dflt){
+  const g = gridEl(); if (!g) return;
+  if (v === dflt) g.removeAttribute(attr); else g.setAttribute(attr, v);
+  g.setAttribute('data-adm-grid', '1'); gridState(); updateCount();
+}
+document.querySelectorAll('#gCols button').forEach(x => x.onclick = () => setGrid('data-cols', x.dataset.v, '4'));
+document.querySelectorAll('#gMob button').forEach(x => x.onclick = () => setGrid('data-mcols', x.dataset.v, ''));
+
 // ---------- referans sırası ----------
 function refPosUpdate(card){
   const g = card.parentElement, list = Array.from(g.children), i = list.indexOf(card);
@@ -1211,6 +1234,7 @@ function changeCount(){
   n += fdoc.querySelectorAll('[data-adm-icon]:not([data-adm-newbtn])').length;
   n += fdoc.querySelectorAll('[data-adm-size]:not([data-adm-newbtn]):not([data-adm-del]), [data-adm-align][data-adm-e]').length;
   n += fdoc.querySelectorAll('[data-adm-opts], [data-adm-ph]').length;
+  n += fdoc.querySelectorAll('[data-adm-grid]').length;
   n += seo ? 1 : 0;
   return n;
 }
@@ -1228,6 +1252,10 @@ function buildHtml(){
   syncRefs(d);
   syncButtons(d);
   syncFields(d);
+  fdoc.querySelectorAll('[data-adm-grid]').forEach(f => {
+    const t = d.querySelector('[data-adm-e="' + f.getAttribute('data-adm-e') + '"]'); if (!t) return;
+    ['data-cols', 'data-mcols'].forEach(a => { if (f.getAttribute(a)) t.setAttribute(a, f.getAttribute(a)); else t.removeAttribute(a); });
+  });
   applySecOrder(d, curSecOrder());
   fdoc.querySelectorAll('[data-adm-t]').forEach(s => {
     const t = d.querySelector('[data-adm-t="' + s.getAttribute('data-adm-t') + '"]'); if (t) t.textContent = s.textContent;
